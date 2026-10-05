@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import type { UserSettings } from '../types';
 import { calculateEDPI, calculateCm360, analyzeSensTier } from '../utils/aimMath';
 import { MOUSE_DATABASE, analyzeWeightDynamics } from '../utils/mouseProfiles';
-import { X, Check, Info, Sliders, Crosshair, Cpu } from 'lucide-react';
+import { X, Check, Info, Sliders, Crosshair, Cpu, Gamepad2 } from 'lucide-react';
+import { audioEngine } from '../utils/audioEngine';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -11,6 +12,14 @@ interface SettingsModalProps {
   onSave: (newSettings: UserSettings) => void;
 }
 
+const GAME_PRESETS = [
+  { id: 'valorant', name: 'Valorant', defaultFov: 103, yawMultiplier: 1.0 },
+  { id: 'cs2', name: 'Counter-Strike 2 / CS:GO', defaultFov: 106, yawMultiplier: 3.1818 },
+  { id: 'apex', name: 'Apex Legends', defaultFov: 110, yawMultiplier: 3.1818 },
+  { id: 'overwatch', name: 'Overwatch 2', defaultFov: 103, yawMultiplier: 10.606 },
+  { id: 'cod', name: 'Call of Duty: Warzone', defaultFov: 103, yawMultiplier: 3.1818 },
+];
+
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
@@ -18,9 +27,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSave,
 }) => {
   const [activeTab, setActiveTab] = useState<'sens' | 'crosshair'>('sens');
+  const [selectedGame, setSelectedGame] = useState('valorant');
 
   const [dpi, setDpi] = useState(settings.dpi);
   const [sensitivity, setSensitivity] = useState(settings.sensitivity);
+  const [fov, setFov] = useState(settings.fov || 103);
   const [mouseProfileId, setMouseProfileId] = useState(settings.mouseProfileId || 'custom');
   const [mouseModel, setMouseModel] = useState(settings.mouseModel || 'Custom / Other Mouse');
   const [mouseWeightGrams, setMouseWeightGrams] = useState(settings.mouseWeightGrams || 70);
@@ -37,6 +48,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   useEffect(() => {
     setDpi(settings.dpi);
     setSensitivity(settings.sensitivity);
+    setFov(settings.fov || 103);
     setMouseProfileId(settings.mouseProfileId || 'custom');
     setMouseModel(settings.mouseModel || 'Custom / Other Mouse');
     setMouseWeightGrams(settings.mouseWeightGrams || 70);
@@ -56,11 +68,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const colors = [
     { label: 'Cyan', hex: '#00f5d4' },
     { label: 'Valorant Red', hex: '#ff4655' },
-    { label: 'Green', hex: '#00ff66' },
+    { label: 'Emerald Green', hex: '#00ff66' },
     { label: 'Gold', hex: '#ffb703' },
-    { label: 'White', hex: '#ffffff' },
-    { label: 'Purple', hex: '#b5179e' },
+    { label: 'Clean White', hex: '#ffffff' },
+    { label: 'Electric Purple', hex: '#b5179e' },
   ];
+
+  const handleSelectGame = (gameId: string) => {
+    setSelectedGame(gameId);
+    const game = GAME_PRESETS.find((g) => g.id === gameId);
+    if (game) {
+      setFov(game.defaultFov);
+    }
+  };
 
   const handleSelectMouse = (id: string) => {
     setMouseProfileId(id);
@@ -72,10 +92,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleSave = () => {
+    audioEngine.playClick();
     onSave({
       ...settings,
       dpi: Number(dpi),
       sensitivity: Number(sensitivity),
+      fov: Number(fov),
       mouseProfileId,
       mouseModel,
       mouseWeightGrams: Number(mouseWeightGrams),
@@ -88,42 +110,49 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-lg bg-[#0f121b] border border-[#23293c] rounded-3xl shadow-2xl p-6 text-slate-200">
-        <div className="flex items-center justify-between pb-4 border-b border-[#21273b]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 select-none animate-in fade-in duration-150">
+      <div className="w-full max-w-xl bg-[#0c101c] border border-[#212d45] rounded-3xl shadow-2xl p-6 text-slate-200 text-left">
+        {/* Header */}
+        <div className="flex items-center justify-between pb-4 border-b border-[#1c273e]">
           <div>
             <h3 className="text-lg font-black text-white tracking-wide uppercase">
               SETTINGS & CALIBRATION
             </h3>
-            <p className="text-xs text-slate-400">Match Valorant settings & customize HUD crosshair</p>
+            <p className="text-xs text-slate-400">Match FPS sensitivity & customize tactical HUD crosshair</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-[#1f2436] transition-colors"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-[#1a2338] transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tab Selector */}
-        <div className="flex items-center gap-2 mt-4 p-1 bg-[#151926] rounded-xl border border-[#242b3e]">
+        <div className="flex items-center gap-2 mt-4 p-1 bg-[#101626] rounded-xl border border-[#1e2a42]">
           <button
-            onClick={() => setActiveTab('sens')}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+            onClick={() => {
+              audioEngine.playClick();
+              setActiveTab('sens');
+            }}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'sens'
-                ? 'bg-[#ff4655] text-white shadow-md shadow-[#ff4655]/25'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
             <Sliders className="w-3.5 h-3.5" />
-            <span>Sensitivity & Hardware</span>
+            <span>Sensitivity & Game Engine</span>
           </button>
 
           <button
-            onClick={() => setActiveTab('crosshair')}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+            onClick={() => {
+              audioEngine.playClick();
+              setActiveTab('crosshair');
+            }}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'crosshair'
-                ? 'bg-[#ff4655] text-white shadow-md shadow-[#ff4655]/25'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -132,14 +161,73 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </button>
         </div>
 
-        <div className="space-y-5 py-5 max-h-[60vh] overflow-y-auto pr-1">
+        <div className="space-y-4 py-4 max-h-[62vh] overflow-y-auto pr-1">
           {activeTab === 'sens' ? (
             <>
-              {/* DPI & Sens Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                    Mouse DPI
+              {/* Game Preset Dropdown matching Benchmark Screenshot 3 */}
+              <div className="bg-[#101626] border border-[#1e2a42] p-3.5 rounded-2xl">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <Gamepad2 className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Target Game Engine</span>
+                  </label>
+                  <span className="text-[10px] font-mono text-blue-400">Exact Yaw Ratio</span>
+                </div>
+
+                <select
+                  value={selectedGame}
+                  onChange={(e) => handleSelectGame(e.target.value)}
+                  className="w-full bg-[#141b2e] border border-[#23314d] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+                >
+                  {GAME_PRESETS.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name} ({g.defaultFov}° FOV)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* In-Game Sensitivity: Slider + Exact Number Box */}
+              <div className="bg-[#101626] border border-[#1e2a42] p-3.5 rounded-2xl">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold text-white uppercase tracking-wider">
+                    In-Game Sensitivity
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min="0.01"
+                      max="5.0"
+                      step="0.01"
+                      value={sensitivity}
+                      onChange={(e) => setSensitivity(Math.max(0.01, Number(e.target.value)))}
+                      className="w-20 bg-[#162035] border border-[#2b3c5e] rounded-lg px-2 py-1 text-xs text-white font-mono text-right focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <input
+                  type="range"
+                  min="0.05"
+                  max="2.5"
+                  step="0.01"
+                  value={sensitivity}
+                  onChange={(e) => setSensitivity(Number(e.target.value))}
+                  className="w-full accent-blue-500 cursor-pointer"
+                />
+
+                <div className="flex justify-between text-[10px] text-slate-500 mt-1 font-mono">
+                  <span>0.05 (Low)</span>
+                  <span>0.35 (Esports Avg)</span>
+                  <span>2.50 (High)</span>
+                </div>
+              </div>
+
+              {/* Mouse DPI: Slider + Number Box + Quick Pills */}
+              <div className="bg-[#101626] border border-[#1e2a42] p-3.5 rounded-2xl">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold text-white uppercase tracking-wider">
+                    Hardware Mouse DPI
                   </label>
                   <input
                     type="number"
@@ -148,42 +236,70 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     step="50"
                     value={dpi}
                     onChange={(e) => setDpi(Math.max(100, Number(e.target.value)))}
-                    className="w-full bg-[#161a26] border border-[#273046] rounded-xl px-3.5 py-2 text-sm text-white font-mono focus:outline-none focus:border-[#ff4655]"
+                    className="w-20 bg-[#162035] border border-[#2b3c5e] rounded-lg px-2 py-1 text-xs text-white font-mono text-right focus:outline-none focus:border-blue-500"
                   />
-                  <span className="text-[11px] text-slate-500 mt-1 block">Esports standard: 800 or 1600</span>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                    Valorant Sensitivity
-                  </label>
-                  <input
-                    type="number"
-                    min="0.01"
-                    max="5.0"
-                    step="0.01"
-                    value={sensitivity}
-                    onChange={(e) => setSensitivity(Math.max(0.01, Number(e.target.value)))}
-                    className="w-full bg-[#161a26] border border-[#273046] rounded-xl px-3.5 py-2 text-sm text-white font-mono focus:outline-none focus:border-[#ff4655]"
-                  />
-                  <span className="text-[11px] text-slate-500 mt-1 block">Exact in-game sensitivity</span>
+                <input
+                  type="range"
+                  min="400"
+                  max="3200"
+                  step="100"
+                  value={dpi}
+                  onChange={(e) => setDpi(Number(e.target.value))}
+                  className="w-full accent-blue-500 cursor-pointer"
+                />
+
+                <div className="flex items-center gap-1.5 mt-2">
+                  {[400, 800, 1600, 3200].map((val) => (
+                    <button
+                      key={val}
+                      onClick={() => setDpi(val)}
+                      className={`flex-1 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                        dpi === val
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-[#141b2e] text-slate-400 hover:text-white border border-[#23314d]'
+                      }`}
+                    >
+                      {val} DPI
+                    </button>
+                  ))}
                 </div>
               </div>
 
+              {/* Field of View (FOV) Slider */}
+              <div className="bg-[#101626] border border-[#1e2a42] p-3.5 rounded-2xl">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-white uppercase tracking-wider">
+                    Horizontal FOV
+                  </label>
+                  <span className="text-xs font-mono font-bold text-blue-400">{fov}°</span>
+                </div>
+                <input
+                  type="range"
+                  min="80"
+                  max="120"
+                  step="1"
+                  value={fov}
+                  onChange={(e) => setFov(Number(e.target.value))}
+                  className="w-full accent-blue-500 cursor-pointer"
+                />
+              </div>
+
               {/* Hardware Mouse Profile Selection */}
-              <div className="space-y-3 bg-[#131722] border border-[#22283a] p-4 rounded-2xl">
+              <div className="space-y-3 bg-[#101626] border border-[#1e2a42] p-3.5 rounded-2xl">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                    <Cpu className="w-3.5 h-3.5 text-[#ff4655]" />
+                    <Cpu className="w-3.5 h-3.5 text-blue-400" />
                     <span>Mouse Hardware Profile</span>
                   </label>
-                  <span className="text-[11px] font-mono text-[#00f5d4]">{mouseWeightGrams}g Mass</span>
+                  <span className="text-[11px] font-mono text-cyan-400">{mouseWeightGrams}g Mass</span>
                 </div>
 
                 <select
                   value={mouseProfileId}
                   onChange={(e) => handleSelectMouse(e.target.value)}
-                  className="w-full bg-[#181d2a] border border-[#283248] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-[#ff4655]"
+                  className="w-full bg-[#141b2e] border border-[#23314d] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
                 >
                   {MOUSE_DATABASE.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -192,45 +308,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   ))}
                 </select>
 
-                {mouseProfileId === 'custom' && (
-                  <div>
-                    <input
-                      type="text"
-                      value={mouseModel}
-                      onChange={(e) => setMouseModel(e.target.value)}
-                      placeholder="Enter custom mouse model name"
-                      className="w-full bg-[#181d2a] border border-[#283248] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#ff4655]"
-                    />
-                  </div>
-                )}
-
-                {/* Weight Slider */}
-                <div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
-                    <span>Physical Weight Calibration:</span>
-                    <span className="font-mono text-white font-bold">{mouseWeightGrams} grams</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="30"
-                    max="140"
-                    step="1"
-                    value={mouseWeightGrams}
-                    onChange={(e) => setMouseWeightGrams(Number(e.target.value))}
-                    className="w-full accent-[#ff4655] cursor-pointer"
-                  />
-                  <div className="flex justify-between text-[10px] text-slate-500 mt-0.5 font-mono">
-                    <span>30g Ultralight</span>
-                    <span>70g Mid</span>
-                    <span>140g Heavy</span>
-                  </div>
-                </div>
-
                 {/* Dynamic Physics Card */}
-                <div className="bg-[#0e111a] border border-[#1e2436] rounded-xl p-3 text-xs space-y-1">
+                <div className="bg-[#0b0e1a] border border-[#1a2336] rounded-xl p-3 text-xs space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-slate-400">Class:</span>
-                    <span className="font-bold text-[#00f5d4]">{weightDynamics.category}</span>
+                    <span className="font-bold text-blue-400">{weightDynamics.category}</span>
                   </div>
                   <p className="text-slate-300 text-[11px] leading-relaxed">
                     {weightDynamics.stoppingAdvice}
@@ -239,17 +321,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
 
               {/* Calculated eDPI Card */}
-              <div className="bg-[#141824] border border-[#23293c] rounded-2xl p-4">
+              <div className="bg-[#12192b] border border-[#212f4c] rounded-2xl p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-slate-400">Calculated eDPI</span>
-                  <span className="text-base font-black text-[#00f5d4]">{currentEdpi} eDPI</span>
+                  <span className="text-xs text-slate-300">Effective DPI (eDPI)</span>
+                  <span className="text-base font-black text-blue-400">{currentEdpi} eDPI</span>
                 </div>
                 <div className="flex items-center justify-between mb-3 text-xs">
                   <span className="text-slate-400">Physical distance for 360° turn:</span>
-                  <span className="font-mono text-slate-200">{currentCm360} cm</span>
+                  <span className="font-mono text-slate-200 font-bold">{currentCm360} cm</span>
                 </div>
-                <div className="bg-[#1a2030] rounded-xl p-3 flex items-start gap-2.5 text-xs">
-                  <Info className="w-4 h-4 text-[#ff4655] shrink-0 mt-0.5" />
+
+                <div className="bg-[#0b0e1a] border border-[#1b253b] rounded-xl p-3 flex items-start gap-2.5 text-xs">
+                  <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
                   <div>
                     <span className="font-bold text-white mr-1.5">Tier: {sensAnalysis.category}.</span>
                     <span className="text-slate-300">{sensAnalysis.advice}</span>
@@ -258,12 +341,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
 
               {/* Tension Sensitivity Threshold */}
-              <div>
+              <div className="bg-[#101626] border border-[#1e2a42] p-3.5 rounded-2xl">
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    Tension Detector Sensitivity
+                  <label className="text-xs font-bold text-white uppercase tracking-wider">
+                    Tension & Jitter Threshold
                   </label>
-                  <span className="text-xs text-[#00f5d4] font-mono">{jitterSensitivityThreshold}x</span>
+                  <span className="text-xs text-cyan-400 font-mono">{jitterSensitivityThreshold}x</span>
                 </div>
                 <input
                   type="range"
@@ -272,30 +355,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   step="0.1"
                   value={jitterSensitivityThreshold}
                   onChange={(e) => setJitterSensitivityThreshold(Number(e.target.value))}
-                  className="w-full accent-[#ff4655] cursor-pointer"
+                  className="w-full accent-blue-500 cursor-pointer"
                 />
-                <div className="flex justify-between text-[11px] text-slate-500 mt-1">
+                <div className="flex justify-between text-[10px] text-slate-500 mt-1">
                   <span>Forgiving</span>
-                  <span>Strict (Pro Standard)</span>
+                  <span>Strict (Esports Standard)</span>
                 </div>
               </div>
             </>
           ) : (
             <>
               {/* Crosshair Style */}
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+              <div className="bg-[#101626] border border-[#1e2a42] p-3.5 rounded-2xl">
+                <label className="block text-xs font-bold text-white uppercase tracking-wider mb-2">
                   Crosshair Style
                 </label>
-                <div className="grid grid-cols-4 gap-2.5">
+                <div className="grid grid-cols-4 gap-2">
                   {(['classic', 'dot', 'plus', 'circle'] as const).map((s) => (
                     <button
                       key={s}
-                      onClick={() => setCrosshairStyle(s)}
-                      className={`py-3 px-2 rounded-xl text-xs font-bold capitalize border transition-all ${
+                      onClick={() => {
+                        audioEngine.playClick();
+                        setCrosshairStyle(s);
+                      }}
+                      className={`py-2.5 px-2 rounded-xl text-xs font-bold capitalize border transition-all cursor-pointer ${
                         crosshairStyle === s
-                          ? 'bg-[#ff4655]/20 border-[#ff4655] text-white shadow-lg shadow-[#ff4655]/20'
-                          : 'bg-[#161a26] border-[#252c3e] text-slate-400 hover:text-white'
+                          ? 'bg-blue-600 border-blue-400 text-white shadow-md shadow-blue-600/30'
+                          : 'bg-[#141b2e] border-[#222f49] text-slate-400 hover:text-white'
                       }`}
                     >
                       {s}
@@ -305,18 +391,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
 
               {/* Crosshair Color */}
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+              <div className="bg-[#101626] border border-[#1e2a42] p-3.5 rounded-2xl">
+                <label className="block text-xs font-bold text-white uppercase tracking-wider mb-2">
                   Crosshair Color
                 </label>
                 <div className="flex items-center gap-3">
                   {colors.map((c) => (
                     <button
                       key={c.hex}
-                      onClick={() => setCrosshairColor(c.hex)}
+                      onClick={() => {
+                        audioEngine.playClick();
+                        setCrosshairColor(c.hex);
+                      }}
                       style={{ backgroundColor: c.hex }}
-                      className={`w-8 h-8 rounded-full transition-transform ${
-                        crosshairColor === c.hex ? 'scale-125 ring-2 ring-white shadow-lg' : 'opacity-80 hover:opacity-100'
+                      className={`w-8 h-8 rounded-full transition-transform cursor-pointer ${
+                        crosshairColor === c.hex ? 'scale-125 ring-2 ring-white shadow-lg' : 'opacity-70 hover:opacity-100'
                       }`}
                       title={c.label}
                     />
@@ -325,12 +414,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
 
               {/* Crosshair Size */}
-              <div>
+              <div className="bg-[#101626] border border-[#1e2a42] p-3.5 rounded-2xl">
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  <label className="text-xs font-bold text-white uppercase tracking-wider">
                     Crosshair Size
                   </label>
-                  <span className="text-xs text-[#00f5d4] font-mono">{crosshairSize}px</span>
+                  <span className="text-xs text-blue-400 font-mono font-bold">{crosshairSize}px</span>
                 </div>
                 <input
                   type="range"
@@ -339,22 +428,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   step="1"
                   value={crosshairSize}
                   onChange={(e) => setCrosshairSize(Number(e.target.value))}
-                  className="w-full accent-[#ff4655] cursor-pointer"
+                  className="w-full accent-blue-500 cursor-pointer"
                 />
               </div>
 
-              {/* Preview Box */}
-              <div className="bg-[#0b0e16] border border-[#21273b] rounded-2xl h-24 flex items-center justify-center relative">
-                <span className="absolute top-2 left-3 text-[10px] uppercase font-bold text-slate-500">
-                  HUD Preview
+              {/* Live Target Preview Swatch */}
+              <div className="relative bg-[#080c16] border border-[#1d273d] rounded-2xl h-32 flex items-center justify-center overflow-hidden">
+                <span className="absolute top-2 left-3 text-[10px] uppercase font-bold text-slate-500 font-mono">
+                  HUD TARGET PREVIEW
                 </span>
+
+                {/* Background Target Rings */}
+                <div className="w-20 h-20 rounded-full border border-blue-500/20 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-full border border-blue-500/30 flex items-center justify-center">
+                    <div className="w-4 h-4 rounded-full bg-blue-500/20" />
+                  </div>
+                </div>
+
+                {/* Centered Rendered Crosshair */}
                 <div
                   style={{
                     width: crosshairStyle === 'dot' ? `${crosshairSize}px` : undefined,
                     height: crosshairStyle === 'dot' ? `${crosshairSize}px` : undefined,
                     backgroundColor: crosshairStyle === 'dot' ? crosshairColor : undefined,
                   }}
-                  className={crosshairStyle === 'dot' ? 'rounded-full' : ''}
+                  className={`absolute pointer-events-none ${crosshairStyle === 'dot' ? 'rounded-full shadow-[0_0_8px_currentColor]' : ''}`}
                 >
                   {crosshairStyle === 'classic' && (
                     <div className="relative w-8 h-8 flex items-center justify-center">
@@ -387,16 +485,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         {/* Footer Buttons */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#21273b]">
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#1c273e]">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-[#1a1e2b] transition-all"
+            className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-[#151c2e] transition-all cursor-pointer"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="flex items-center gap-1.5 px-6 py-2.5 rounded-xl text-xs font-bold bg-[#ff4655] hover:bg-[#ff5a68] text-white uppercase tracking-wider shadow-lg shadow-[#ff4655]/25 transition-all"
+            className="flex items-center gap-1.5 px-6 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white uppercase tracking-wider shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
           >
             <Check className="w-4 h-4" />
             <span>Apply Settings</span>
@@ -406,3 +504,4 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     </div>
   );
 };
+

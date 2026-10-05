@@ -22,6 +22,7 @@ export type AppTab =
   | 'hero'
   | 'radiant'
   | 'hub'
+  | 'rank-overview'
   | 'tile-frenzy'
   | 'whisper'
   | 'stopping'
@@ -103,6 +104,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Sparkles className="w-3.5 h-3.5 text-blue-300" />
               <span>Path to Radiant</span>
+            </button>
+
+            <button
+              onClick={() => handleTabClick('rank-overview')}
+              onMouseEnter={() => audioEngine.playHover()}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'rank-overview'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#161e31]'
+              }`}
+            >
+              <Trophy className="w-3.5 h-3.5 text-blue-300" />
+              <span>Rank Overview</span>
             </button>
 
             <button

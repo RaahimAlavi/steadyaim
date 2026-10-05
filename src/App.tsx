@@ -12,6 +12,7 @@ import { TileFrenzyDrill } from './components/TileFrenzyDrill';
 import { SensBenchmark } from './components/SensBenchmark';
 import { ClipAnalyzer } from './components/ClipAnalyzer';
 import { LeaderboardView } from './components/LeaderboardView';
+import { RankOverview } from './components/RankOverview';
 import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
 import ClickSpark from './components/reactbits/ClickSpark';
@@ -67,6 +68,7 @@ export function App() {
       const validTabs: AppTab[] = [
         'hero',
         'radiant',
+        'rank-overview',
         'hub',
         'tile-frenzy',
         'whisper',
@@ -110,6 +112,9 @@ export function App() {
         break;
       case 'radiant':
         document.title = 'SteadyAim · Path to Radiant';
+        break;
+      case 'rank-overview':
+        document.title = 'SteadyAim · My Rank Overview';
         break;
       case 'hub':
         document.title = 'SteadyAim · Drill Hub';
@@ -278,6 +283,16 @@ export function App() {
                 <PathToRadiant
                   onLaunchDrill={(drill, nodeId) => {
                     setActiveCampaignNodeId(nodeId);
+                    setActiveTab(drill);
+                  }}
+                  currentEdpi={currentEdpi}
+                />
+              )}
+
+              {activeTab === 'rank-overview' && (
+                <RankOverview
+                  onLaunchDiscipline={(drill) => {
+                    setActiveCampaignNodeId(null);
                     setActiveTab(drill);
                   }}
                   currentEdpi={currentEdpi}

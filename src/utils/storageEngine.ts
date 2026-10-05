@@ -210,7 +210,9 @@ class StorageEngine {
     }
   }
 
-  public getLeaderboard(type: 'global' | 'daily' | 'league'): LeaderboardEntry[] {
+  public getLeaderboard(
+    type: 'global' | 'daily' | 'league' | 'flicking' | 'switching' | 'clicking' | 'tracking'
+  ): LeaderboardEntry[] {
     const sessions = this.getSessions();
     const profile = this.getProfile();
     const totalStars = this.getTotalStars();
@@ -251,6 +253,50 @@ class StorageEngine {
     if (type === 'league') {
       return all
         .slice(4, 15)
+        .sort((a, b) => b.score - a.score)
+        .map((p, idx) => ({ ...p, rank: idx + 1 }));
+    }
+
+    if (type === 'flicking') {
+      return all
+        .map((p) => ({
+          ...p,
+          score: Math.round(p.score * 0.96),
+          accuracy: Math.min(99, Number((p.accuracy + 1.2).toFixed(1))),
+        }))
+        .sort((a, b) => b.score - a.score)
+        .map((p, idx) => ({ ...p, rank: idx + 1 }));
+    }
+
+    if (type === 'switching') {
+      return all
+        .map((p) => ({
+          ...p,
+          score: Math.round(p.score * 0.92),
+          accuracy: Math.max(70, Number((p.accuracy - 2.5).toFixed(1))),
+        }))
+        .sort((a, b) => b.score - a.score)
+        .map((p, idx) => ({ ...p, rank: idx + 1 }));
+    }
+
+    if (type === 'clicking') {
+      return all
+        .map((p) => ({
+          ...p,
+          score: Math.round(p.score * 0.94),
+          accuracy: Math.min(99, Number((p.accuracy + 0.8).toFixed(1))),
+        }))
+        .sort((a, b) => b.score - a.score)
+        .map((p, idx) => ({ ...p, rank: idx + 1 }));
+    }
+
+    if (type === 'tracking') {
+      return all
+        .map((p) => ({
+          ...p,
+          score: Math.round(p.score * 0.89),
+          accuracy: Math.max(68, Number((p.accuracy - 4.1).toFixed(1))),
+        }))
         .sort((a, b) => b.score - a.score)
         .map((p, idx) => ({ ...p, rank: idx + 1 }));
     }
