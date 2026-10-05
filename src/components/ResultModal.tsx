@@ -221,15 +221,15 @@ export const ResultModal: React.FC<ResultModalProps> = ({
             <p className="leading-relaxed">
               {result.tenseAlertsCount === 0 && result.accuracy >= 80 ? (
                 <span>
-                  🔥 Exceptional calm! You navigated all {result.totalTargets} duels with fluid deceleration. Your wrist stayed loose and your G402 did not fight mousepad stiction.
+                  🔥 Exceptional calm! You navigated all {result.totalTargets} duels with fluid deceleration. Your wrist stayed loose and your mouse did not fight mousepad stiction.
                 </span>
               ) : result.tenseAlertsCount > 3 ? (
                 <span>
-                  ⚠️ You triggered <strong>{result.tenseAlertsCount} tension warnings</strong>. Notice how your fingers squeeze the mouse when trying to stop right on the head. Loosen your pinky and thumb pressure by 25% on your G402 before starting the next round.
+                  ⚠️ You triggered <strong>{result.tenseAlertsCount} tension warnings</strong>. Notice how your fingers squeeze the mouse when trying to stop right on the head. Loosen your pinky and thumb pressure by 25% before starting the next round.
                 </span>
               ) : (
                 <span>
-                  Solid execution! A couple of micro-adjustments had slight bounce at the stop point. Remember: let the mouse glide gently into the head—never slam your wrist like hitting a brake wall.
+                  Solid execution! A couple of micro-adjustments had slight bounce at the stop point. Remember: let the mouse glide gently into the head: never slam your wrist like hitting a brake wall.
                 </span>
               )}
             </p>
@@ -243,7 +243,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
             className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#1a1f2e] border border-[#2b3348] text-xs font-semibold text-slate-300 hover:text-white hover:bg-[#22293d] transition-all"
           >
             <Sliders className="w-3.5 h-3.5 text-[#00f5d4]" />
-            <span>Calibrate Sens (0.32)</span>
+            <span>Calibrate Sens & Hardware</span>
           </button>
 
           <div className="flex items-center gap-3 w-full sm:w-auto">

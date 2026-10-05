@@ -298,7 +298,7 @@ export const LiveDiagnostics: React.FC<LiveDiagnosticsProps> = ({ settings }) =>
                 </div>
                 <h3 className="text-lg font-bold text-white mb-1">Click Anywhere to Lock Aim</h3>
                 <p className="text-xs text-slate-300 max-w-sm mb-4">
-                  Uses raw relative hardware counts (exact Valorant 0.32 sensitivity / 800 DPI) without Windows pointer curves.
+                  Uses raw relative hardware counts (exact Valorant {settings.sensitivity} sensitivity / {settings.dpi} DPI) without Windows pointer curves.
                 </p>
                 <div className="px-3.5 py-1.5 rounded-lg bg-[#161a26] border border-[#262c3f] text-[11px] text-slate-400 font-mono">
                   Press ESC anytime to unlock cursor
@@ -473,7 +473,7 @@ export const LiveDiagnostics: React.FC<LiveDiagnosticsProps> = ({ settings }) =>
                     {currentStroke.stopBounceDetected
                       ? 'When bringing the mouse to a halt, your hand rebounded backward! That rebound is the classic "locked wrist" reflex. Imagine easing the mouse into a pillow rather than hitting a brick wall.'
                       : currentStroke.jitterScore < 70
-                      ? 'Tremor detected during the micro-movement. Check your thumb and pinky grip on your G402—if you are pinching the sides too hard, loosen by 20%.'
+                      ? `Tremor detected during the micro-movement. Check your thumb and pinky grip on your ${settings.mouseModel || 'mouse'}: if you are pinching the sides too hard, loosen by 20%.`
                       : 'Excellent relaxed stroke! The glide was smooth with zero rebound at the stop.'}
                   </p>
                 </div>

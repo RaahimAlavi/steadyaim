@@ -5,9 +5,17 @@ import { MotionTracker } from '../utils/motionAnalytics';
 import { sounds } from '../utils/soundEffects';
 import { HUDCrosshair } from './HUDCrosshair';
 import { ResultModal } from './ResultModal';
-import { ShieldAlert, Play, Crosshair } from 'lucide-react';
-
-
+import gsap from 'gsap';
+import {
+  ShieldAlert,
+  Play,
+  Crosshair,
+  Maximize2,
+  Minimize2,
+  AlertTriangle,
+  RotateCcw,
+  Zap,
+} from 'lucide-react';
 
 interface StoppingPowerDrillProps {
   settings: UserSettings;
@@ -18,12 +26,16 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
   settings,
   onOpenSettings,
 }) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fpsEngineRef = useRef<FPSEngine | null>(null);
   const motionTrackerRef = useRef<MotionTracker>(new MotionTracker());
 
+  const bounceNotificationRef = useRef<HTMLDivElement | null>(null);
+
   const [isLocked, setIsLocked] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);
 
   const totalTargetsInRound = 15;
@@ -50,6 +62,30 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
       engine.destroy();
       fpsEngineRef.current = null;
     };
+  }, []);
+
+  // Listen to Fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const active = Boolean(document.fullscreenElement);
+      setIsFullscreen(active);
+      setTimeout(() => {
+        fpsEngineRef.current?.resize();
+      }, 50);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
   }, []);
 
   const requestLock = useCallback(() => {
@@ -153,6 +189,15 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
 
     if (stopBounce) {
       setStopBouncesCount((prev) => prev + 1);
+      sounds.playTensionAlert();
+
+      if (bounceNotificationRef.current) {
+        gsap.fromTo(
+          bounceNotificationRef.current,
+          { y: -15, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.25, ease: 'power2.out' }
+        );
+      }
     }
 
     const { isHit } = fpsEngineRef.current.checkHit();
@@ -212,11 +257,18 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
   }, [isLocked, isPlaying, settings.sensitivity, handleFire]);
 
   return (
-    <div className="space-y-6">
+    <div
+      ref={containerRef}
+      className={`space-y-6 transition-all ${
+        isFullscreen
+          ? 'fixed inset-0 z-50 w-screen h-screen bg-[#07090e] p-4 flex flex-col justify-between space-y-0 overflow-hidden'
+          : ''
+      }`}
+    >
       {/* Top Banner */}
       <div className="bg-[#121520] border border-[#23293c] rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#ff4655]/20 border border-[#ff4655]/40 flex items-center justify-center text-[#ff4655]">
+          <div className="w-10 h-10 rounded-xl bg-[#ff4655]/20 border border-[#ff4655]/40 flex items-center justify-center text-[#ff4655] shadow-lg shadow-[#ff4655]/15">
             <ShieldAlert className="w-5 h-5" />
           </div>
           <div>
@@ -255,37 +307,82 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
               {stopBouncesCount}
             </span>
           </div>
+
+          <button
+            onClick={toggleFullscreen}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1a2133] hover:bg-[#232b40] border border-[#2b3752] text-xs font-bold text-slate-200 hover:text-white transition-all shadow-md ml-1"
+            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Aim Lab Fullscreen Focus Mode'}
+          >
+            {isFullscreen ? (
+              <>
+                <Minimize2 className="w-3.5 h-3.5 text-[#00f5d4]" />
+                <span className="hidden sm:inline">Exit Fullscreen</span>
+              </>
+            ) : (
+              <>
+                <Maximize2 className="w-3.5 h-3.5 text-[#00f5d4]" />
+                <span className="hidden sm:inline">Fullscreen Focus</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 
       {/* 3D Viewport */}
-      <div className="relative rounded-3xl overflow-hidden border border-[#222738] shadow-2xl bg-[#0a0c13]">
+      <div
+        className={`relative overflow-hidden border border-[#222738] shadow-2xl bg-[#0a0c13] ${
+          isFullscreen ? 'flex-1 rounded-2xl w-full my-2' : 'rounded-3xl'
+        }`}
+      >
         <canvas
           ref={canvasRef}
           onClick={!isPlaying ? startDrill : requestLock}
-          className="w-full h-[540px] cursor-none block"
+          className={`w-full cursor-none block ${isFullscreen ? 'h-full' : 'h-[540px]'}`}
         />
 
         <HUDCrosshair settings={settings} isTense={false} />
+
+        {/* Real-time Stop Bounce Warning Overlay */}
+        <div
+          ref={bounceNotificationRef}
+          className="absolute top-6 left-1/2 -translate-x-1/2 bg-[#ff4655] text-white px-5 py-2 rounded-xl text-xs font-black tracking-wider uppercase items-center gap-2 shadow-2xl shadow-[#ff4655]/60 pointer-events-none hidden"
+        >
+          <AlertTriangle className="w-4 h-4 text-white" />
+          <span>Stop-Bounce Detected: Ease forearm braking rather than slamming wrist!</span>
+        </div>
 
         {/* Start Overlay */}
         {!isPlaying && !showResultModal && (
           <div
             onClick={startDrill}
-            className="absolute inset-0 bg-black/70 backdrop-blur-[3px] flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-all hover:bg-black/60"
+            className="absolute inset-0 bg-black/75 backdrop-blur-[4px] flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-all hover:bg-black/65"
           >
             <div className="w-16 h-16 rounded-2xl bg-[#ff4655]/20 border border-[#ff4655]/50 flex items-center justify-center mb-4 shadow-xl shadow-[#ff4655]/30">
               <Play className="w-8 h-8 text-[#ff4655] ml-1" />
             </div>
-            <h3 className="text-2xl font-black text-white mb-2 tracking-wide">
+            <h3 className="text-2xl font-black text-white mb-2 tracking-wide uppercase">
               START STOPPING POWER DRILL
             </h3>
             <p className="text-xs text-slate-300 max-w-md mb-6 leading-relaxed">
               15 wide-angle targets in 3D tactical space. Flick fast, but focus on the stop phase:
               ease into the head without rebounding or oscillating backward.
             </p>
-            <div className="px-6 py-3 rounded-xl bg-[#ff4655] hover:bg-[#ff5a68] text-white text-xs font-bold tracking-wider uppercase shadow-xl shadow-[#ff4655]/35 transition-all">
-              Begin 3D Flick Drill (15 Targets)
+            <div className="flex items-center gap-3">
+              <div className="px-6 py-3 rounded-xl bg-[#ff4655] hover:bg-[#ff5a68] text-white text-xs font-bold tracking-wider uppercase shadow-xl shadow-[#ff4655]/35 transition-all">
+                Begin 3D Flick Drill (15 Targets)
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleFullscreen();
+                  startDrill();
+                }}
+                className="px-5 py-3 rounded-xl bg-[#1b2234] hover:bg-[#252f48] border border-[#2d3a56] text-white text-xs font-bold tracking-wider uppercase transition-all flex items-center gap-2"
+              >
+                <Maximize2 className="w-4 h-4 text-[#00f5d4]" />
+                <span>Fullscreen Focus</span>
+              </button>
             </div>
           </div>
         )}
@@ -312,6 +409,46 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
         onOpenSettings={onOpenSettings}
         onClose={() => setShowResultModal(false)}
       />
+
+      {!isFullscreen && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-[#121520] border border-[#23293c] rounded-2xl p-4 flex gap-3 shadow-lg">
+            <div className="w-8 h-8 rounded-xl bg-[#00f5d4]/10 text-[#00f5d4] flex items-center justify-center shrink-0">
+              <Zap className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-white mb-0.5">Critical Deceleration</h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Most missed duels occur because the hand oscillates past the target and has to correct back.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-[#121520] border border-[#23293c] rounded-2xl p-4 flex gap-3 shadow-lg">
+            <div className="w-8 h-8 rounded-xl bg-[#ff4655]/10 text-[#ff4655] flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-white mb-0.5">Pad Friction Braking</h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Allow the mousepad surface resistance to slow your glide instead of rigidly clenching tendons.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-[#121520] border border-[#23293c] rounded-2xl p-4 flex gap-3 shadow-lg">
+            <div className="w-8 h-8 rounded-xl bg-[#ffb703]/10 text-[#ffb703] flex items-center justify-center shrink-0">
+              <RotateCcw className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-white mb-0.5">Target Confirmation</h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Wait until the crosshair comes to a complete rest on the head hitbox before firing.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

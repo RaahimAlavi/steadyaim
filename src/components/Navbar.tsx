@@ -101,7 +101,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             <Sliders className="w-3.5 h-3.5" />
-            <span>G402 & Sens</span>
+            <span>Sens & Hardware Lab</span>
           </button>
         </nav>
 

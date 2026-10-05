@@ -84,13 +84,13 @@ export function analyzeSensTier(edpi: number): {
     return {
       category: 'High',
       description: 'High sensitivity zone.',
-      advice: 'Fingertip micro-adjustments can easily jitter if you tense up or use a heavier mouse like the G402.',
+      advice: 'Fingertip micro-adjustments can easily jitter if you tense up or use a heavier mouse.',
     };
   } else {
     return {
       category: 'Very High',
       description: 'Hyper-sensitive. Micro-jitter is almost unavoidable without extreme finger dampening.',
-      advice: 'Strongly recommended to lower towards the 220–280 eDPI range for tactical FPS consistency.',
+      advice: 'Strongly recommended to lower towards the 220-280 eDPI range for tactical FPS consistency.',
     };
   }
 }

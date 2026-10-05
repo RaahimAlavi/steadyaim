@@ -5,7 +5,19 @@ import { MotionTracker } from '../utils/motionAnalytics';
 import { sounds } from '../utils/soundEffects';
 import { HUDCrosshair } from './HUDCrosshair';
 import { ResultModal } from './ResultModal';
-import { Target, Play, RotateCcw, AlertCircle, Crosshair, Flame, Shield } from 'lucide-react';
+import gsap from 'gsap';
+import {
+  Target,
+  Play,
+  RotateCcw,
+  AlertCircle,
+  Crosshair,
+  Flame,
+  Shield,
+  Maximize2,
+  Minimize2,
+  Zap,
+} from 'lucide-react';
 
 interface WhisperGripDrillProps {
   settings: UserSettings;
@@ -16,12 +28,17 @@ export const WhisperGripDrill: React.FC<WhisperGripDrillProps> = ({
   settings,
   onOpenSettings,
 }) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fpsEngineRef = useRef<FPSEngine | null>(null);
   const motionTrackerRef = useRef<MotionTracker>(new MotionTracker());
 
+  const streakBadgeRef = useRef<HTMLDivElement | null>(null);
+  const tensionAlertRef = useRef<HTMLDivElement | null>(null);
+
   const [isLocked, setIsLocked] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);
 
   // Drill progression
@@ -47,7 +64,10 @@ export const WhisperGripDrill: React.FC<WhisperGripDrillProps> = ({
     const engine = new FPSEngine(canvasRef.current);
     fpsEngineRef.current = engine;
 
-    const handleResize = () => engine.resize();
+    const handleResize = () => {
+      engine.resize();
+    };
+
     window.addEventListener('resize', handleResize);
 
     return () => {
@@ -55,6 +75,31 @@ export const WhisperGripDrill: React.FC<WhisperGripDrillProps> = ({
       engine.destroy();
       fpsEngineRef.current = null;
     };
+  }, []);
+
+  // Listen to Fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const active = Boolean(document.fullscreenElement);
+      setIsFullscreen(active);
+      setTimeout(() => {
+        fpsEngineRef.current?.resize();
+      }, 50);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  // Toggle Fullscreen
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
   }, []);
 
   // Pointer Lock handling
@@ -173,7 +218,17 @@ export const WhisperGripDrill: React.FC<WhisperGripDrillProps> = ({
     if (isHit) {
       sounds.playHeadshot();
       setHitsCount((prev) => prev + 1);
-      setCurrentStreak((prev) => prev + 1);
+      setCurrentStreak((prev) => {
+        const next = prev + 1;
+        if (streakBadgeRef.current) {
+          gsap.fromTo(
+            streakBadgeRef.current,
+            { scale: 1.35, rotate: -3 },
+            { scale: 1.0, rotate: 0, duration: 0.3, ease: 'back.out(2)' }
+          );
+        }
+        return next;
+      });
 
       shotDetailsRef.current.push({
         shotNumber: currentTargetIndex,
@@ -234,6 +289,14 @@ export const WhisperGripDrill: React.FC<WhisperGripDrillProps> = ({
         if (isPlaying) {
           setTenseFlagsCount((prev) => prev + 1);
           sounds.playTensionAlert();
+
+          if (tensionAlertRef.current) {
+            gsap.fromTo(
+              tensionAlertRef.current,
+              { y: -10, opacity: 0 },
+              { y: 0, opacity: 1, duration: 0.2, ease: 'power2.out' }
+            );
+          }
         }
       }
     };
@@ -254,11 +317,18 @@ export const WhisperGripDrill: React.FC<WhisperGripDrillProps> = ({
   }, [isLocked, isPlaying, settings.sensitivity, settings.jitterSensitivityThreshold, handleFire]);
 
   return (
-    <div className="space-y-6">
+    <div
+      ref={containerRef}
+      className={`space-y-6 transition-all ${
+        isFullscreen
+          ? 'fixed inset-0 z-50 w-screen h-screen bg-[#07090e] p-4 flex flex-col justify-between space-y-0 overflow-hidden'
+          : ''
+      }`}
+    >
       {/* Top Tactical HUD Bar */}
       <div className="bg-[#121520] border border-[#23293c] rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#ff4655]/20 border border-[#ff4655]/40 flex items-center justify-center text-[#ff4655]">
+          <div className="w-10 h-10 rounded-xl bg-[#ff4655]/20 border border-[#ff4655]/40 flex items-center justify-center text-[#ff4655] shadow-lg shadow-[#ff4655]/15">
             <Target className="w-5 h-5" />
           </div>
           <div>
@@ -271,12 +341,12 @@ export const WhisperGripDrill: React.FC<WhisperGripDrillProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              Exact 103° FOV & camera rotation. Crosshair stays in position—targets spawn in space.
+              Exact 103° FOV & camera rotation. Crosshair stays in position: targets spawn in space.
             </p>
           </div>
         </div>
 
-        {/* Live Counters & Streak */}
+        {/* Live Counters, Streak, & Fullscreen Button */}
         <div className="flex items-center gap-2.5">
           <div className="bg-[#0b0e16] border border-[#1e2436] rounded-xl px-3.5 py-1.5 text-center">
             <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider block">
@@ -310,20 +380,46 @@ export const WhisperGripDrill: React.FC<WhisperGripDrillProps> = ({
           </div>
 
           {currentStreak >= 3 && (
-            <div className="bg-[#ff4655]/20 border border-[#ff4655]/50 rounded-xl px-3 py-1.5 flex items-center gap-1.5 text-xs font-bold text-[#ff4655] animate-pulse">
+            <div
+              ref={streakBadgeRef}
+              className="bg-[#ff4655]/20 border border-[#ff4655]/50 rounded-xl px-3 py-1.5 flex items-center gap-1.5 text-xs font-bold text-[#ff4655] shadow-lg shadow-[#ff4655]/25"
+            >
               <Flame className="w-3.5 h-3.5 text-[#ff4655]" />
               <span>{currentStreak} STREAK</span>
             </div>
           )}
+
+          {/* Fullscreen Toggle Button */}
+          <button
+            onClick={toggleFullscreen}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1a2133] hover:bg-[#232b40] border border-[#2b3752] text-xs font-bold text-slate-200 hover:text-white transition-all shadow-md ml-1"
+            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Aim Lab Fullscreen Focus Mode'}
+          >
+            {isFullscreen ? (
+              <>
+                <Minimize2 className="w-3.5 h-3.5 text-[#00f5d4]" />
+                <span className="hidden sm:inline">Exit Fullscreen</span>
+              </>
+            ) : (
+              <>
+                <Maximize2 className="w-3.5 h-3.5 text-[#00f5d4]" />
+                <span className="hidden sm:inline">Fullscreen Focus</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 
       {/* Main 3D Viewport */}
-      <div className="relative rounded-3xl overflow-hidden border border-[#222738] shadow-2xl bg-[#0a0c13]">
+      <div
+        className={`relative overflow-hidden border border-[#222738] shadow-2xl bg-[#0a0c13] ${
+          isFullscreen ? 'flex-1 rounded-2xl w-full my-2' : 'rounded-3xl'
+        }`}
+      >
         <canvas
           ref={canvasRef}
           onClick={!isPlaying ? startDrill : requestLock}
-          className="w-full h-[540px] cursor-none block"
+          className={`w-full cursor-none block ${isFullscreen ? 'h-full' : 'h-[540px]'}`}
         />
 
         {/* 3D Center HUD Crosshair */}
@@ -331,7 +427,10 @@ export const WhisperGripDrill: React.FC<WhisperGripDrillProps> = ({
 
         {/* Real-time Tension Alarm Overlay */}
         {isCurrentlyTense && (
-          <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-[#ff4655] text-white px-5 py-2 rounded-xl text-xs font-black tracking-wider uppercase flex items-center gap-2 shadow-2xl shadow-[#ff4655]/60 animate-bounce pointer-events-none">
+          <div
+            ref={tensionAlertRef}
+            className="absolute top-6 left-1/2 -translate-x-1/2 bg-[#ff4655] text-white px-5 py-2 rounded-xl text-xs font-black tracking-wider uppercase flex items-center gap-2 shadow-2xl shadow-[#ff4655]/60 animate-bounce pointer-events-none"
+          >
             <AlertCircle className="w-4 h-4 text-white" />
             <span>Tense Grip / Tremor Detected! Relax Fingers & Wrist!</span>
           </div>
@@ -362,22 +461,34 @@ export const WhisperGripDrill: React.FC<WhisperGripDrillProps> = ({
         {!isPlaying && !showResultModal && (
           <div
             onClick={startDrill}
-            className="absolute inset-0 bg-black/70 backdrop-blur-[3px] flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-all hover:bg-black/60"
+            className="absolute inset-0 bg-black/75 backdrop-blur-[4px] flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-all hover:bg-black/65"
           >
             <div className="w-16 h-16 rounded-2xl bg-[#ff4655]/20 border border-[#ff4655]/50 flex items-center justify-center mb-4 shadow-xl shadow-[#ff4655]/30">
               <Play className="w-8 h-8 text-[#ff4655] ml-1" />
             </div>
-            <h3 className="text-2xl font-black text-white mb-2 tracking-wide">
+            <h3 className="text-2xl font-black text-white mb-2 tracking-wide uppercase">
               START 3D WHISPER GRIP DRILL
             </h3>
             <p className="text-xs text-slate-300 max-w-md mb-6 leading-relaxed">
               20 Micro-targets in 3D tactical space. Exact Valorant sensitivity and 103° FOV.
-              Your crosshair stays in place—smoothly glide to each head without locking your wrist.
+              Your crosshair stays in place: smoothly glide to each head without locking your wrist.
             </p>
             <div className="flex items-center gap-3">
               <div className="px-6 py-3 rounded-xl bg-[#ff4655] hover:bg-[#ff5a68] text-white text-xs font-bold tracking-wider uppercase shadow-xl shadow-[#ff4655]/35 transition-all">
                 Enter Tactical Range (20 Targets)
               </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleFullscreen();
+                  startDrill();
+                }}
+                className="px-5 py-3 rounded-xl bg-[#1b2234] hover:bg-[#252f48] border border-[#2d3a56] text-white text-xs font-bold tracking-wider uppercase transition-all flex items-center gap-2"
+              >
+                <Maximize2 className="w-4 h-4 text-[#00f5d4]" />
+                <span>Fullscreen Focus</span>
+              </button>
             </div>
           </div>
         )}
@@ -406,44 +517,46 @@ export const WhisperGripDrill: React.FC<WhisperGripDrillProps> = ({
         onClose={() => setShowResultModal(false)}
       />
 
-      {/* Philosophy / Coaching Tips Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-[#121520] border border-[#222738] rounded-2xl p-4 flex gap-3">
-          <div className="w-8 h-8 rounded-xl bg-[#00f5d4]/10 text-[#00f5d4] flex items-center justify-center shrink-0">
-            <Shield className="w-4 h-4" />
+      {/* Philosophy / Coaching Tips Grid (Hidden in Fullscreen for immersive cockpit view) */}
+      {!isFullscreen && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-[#121520] border border-[#222738] rounded-2xl p-4 flex gap-3 shadow-lg">
+            <div className="w-8 h-8 rounded-xl bg-[#00f5d4]/10 text-[#00f5d4] flex items-center justify-center shrink-0">
+              <Shield className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-white mb-0.5">Continuous Crosshair Flow</h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                In real gunfights, your crosshair stays where you last shot. Micro-adjust smoothly from that position to the new threat.
+              </p>
+            </div>
           </div>
-          <div>
-            <h4 className="text-xs font-bold text-white mb-0.5">Continuous Crosshair Flow</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              In real gunfights, your crosshair stays where you last shot. Micro-adjust smoothly from that position to the new threat.
-            </p>
-          </div>
-        </div>
 
-        <div className="bg-[#121520] border border-[#222738] rounded-2xl p-4 flex gap-3">
-          <div className="w-8 h-8 rounded-xl bg-[#ff4655]/10 text-[#ff4655] flex items-center justify-center shrink-0">
-            <AlertCircle className="w-4 h-4" />
+          <div className="bg-[#121520] border border-[#222738] rounded-2xl p-4 flex gap-3 shadow-lg">
+            <div className="w-8 h-8 rounded-xl bg-[#ff4655]/10 text-[#ff4655] flex items-center justify-center shrink-0">
+              <Zap className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-white mb-0.5">Relaxed Finger Pressure</h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                If your mouse feels sticky on micro-movements, you are pushing downward. Hold the mouse like an egg; let the skates glide freely.
+              </p>
+            </div>
           </div>
-          <div>
-            <h4 className="text-xs font-bold text-white mb-0.5">Relaxed Finger Pressure</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              If your G402 feels sticky on micro-movements, you are pushing downward. Hold the mouse like an egg; let the skates glide freely.
-            </p>
-          </div>
-        </div>
 
-        <div className="bg-[#121520] border border-[#222738] rounded-2xl p-4 flex gap-3">
-          <div className="w-8 h-8 rounded-xl bg-[#ffb703]/10 text-[#ffb703] flex items-center justify-center shrink-0">
-            <RotateCcw className="w-4 h-4" />
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-white mb-0.5">Target Confirmation</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Do not click on reaction time alone. Confirm the crosshair has settled on the head hitbox, then fire.
-            </p>
+          <div className="bg-[#121520] border border-[#222738] rounded-2xl p-4 flex gap-3 shadow-lg">
+            <div className="w-8 h-8 rounded-xl bg-[#ffb703]/10 text-[#ffb703] flex items-center justify-center shrink-0">
+              <RotateCcw className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-white mb-0.5">Target Confirmation</h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Do not click on reaction time alone. Confirm the crosshair has settled on the head hitbox, then fire.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

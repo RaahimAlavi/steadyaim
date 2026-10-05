@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import type { UserSettings } from '../types';
 import { calculateEDPI, calculateCm360, analyzeSensTier } from '../utils/aimMath';
-import { X, Check, Info, Sliders, Crosshair } from 'lucide-react';
-
+import { MOUSE_DATABASE, analyzeWeightDynamics } from '../utils/mouseProfiles';
+import { X, Check, Info, Sliders, Crosshair, Cpu } from 'lucide-react';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -21,7 +21,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const [dpi, setDpi] = useState(settings.dpi);
   const [sensitivity, setSensitivity] = useState(settings.sensitivity);
-  const [mouseModel, setMouseModel] = useState(settings.mouseModel);
+  const [mouseProfileId, setMouseProfileId] = useState(settings.mouseProfileId || 'custom');
+  const [mouseModel, setMouseModel] = useState(settings.mouseModel || 'Custom / Other Mouse');
+  const [mouseWeightGrams, setMouseWeightGrams] = useState(settings.mouseWeightGrams || 70);
   const [jitterSensitivityThreshold, setJitterSensitivityThreshold] = useState(
     settings.jitterSensitivityThreshold
   );
@@ -35,7 +37,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   useEffect(() => {
     setDpi(settings.dpi);
     setSensitivity(settings.sensitivity);
-    setMouseModel(settings.mouseModel);
+    setMouseProfileId(settings.mouseProfileId || 'custom');
+    setMouseModel(settings.mouseModel || 'Custom / Other Mouse');
+    setMouseWeightGrams(settings.mouseWeightGrams || 70);
     setJitterSensitivityThreshold(settings.jitterSensitivityThreshold);
     setCrosshairStyle(settings.crosshairStyle || 'classic');
     setCrosshairColor(settings.crosshairColor || '#00f5d4');
@@ -47,6 +51,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const currentEdpi = calculateEDPI(dpi, sensitivity);
   const currentCm360 = calculateCm360(dpi, sensitivity);
   const sensAnalysis = analyzeSensTier(currentEdpi);
+  const weightDynamics = analyzeWeightDynamics(mouseWeightGrams);
 
   const colors = [
     { label: 'Cyan', hex: '#00f5d4' },
@@ -57,12 +62,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     { label: 'Purple', hex: '#b5179e' },
   ];
 
+  const handleSelectMouse = (id: string) => {
+    setMouseProfileId(id);
+    const found = MOUSE_DATABASE.find((m) => m.id === id);
+    if (found) {
+      setMouseModel(found.name);
+      setMouseWeightGrams(found.weightGrams);
+    }
+  };
+
   const handleSave = () => {
     onSave({
       ...settings,
       dpi: Number(dpi),
       sensitivity: Number(sensitivity),
+      mouseProfileId,
       mouseModel,
+      mouseWeightGrams: Number(mouseWeightGrams),
       jitterSensitivityThreshold: Number(jitterSensitivityThreshold),
       crosshairStyle,
       crosshairColor,
@@ -100,7 +116,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             }`}
           >
             <Sliders className="w-3.5 h-3.5" />
-            <span>Sensitivity & DPI</span>
+            <span>Sensitivity & Hardware</span>
           </button>
 
           <button
@@ -134,7 +150,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     onChange={(e) => setDpi(Math.max(100, Number(e.target.value)))}
                     className="w-full bg-[#161a26] border border-[#273046] rounded-xl px-3.5 py-2 text-sm text-white font-mono focus:outline-none focus:border-[#ff4655]"
                   />
-                  <span className="text-[11px] text-slate-500 mt-1 block">Usually 800 for your G402</span>
+                  <span className="text-[11px] text-slate-500 mt-1 block">Esports standard: 800 or 1600</span>
                 </div>
 
                 <div>
@@ -154,18 +170,72 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               </div>
 
-              {/* Hardware */}
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                  Mouse Model
-                </label>
-                <input
-                  type="text"
-                  value={mouseModel}
-                  onChange={(e) => setMouseModel(e.target.value)}
-                  placeholder="e.g. Logitech G402"
-                  className="w-full bg-[#161a26] border border-[#273046] rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-[#ff4655]"
-                />
+              {/* Hardware Mouse Profile Selection */}
+              <div className="space-y-3 bg-[#131722] border border-[#22283a] p-4 rounded-2xl">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <Cpu className="w-3.5 h-3.5 text-[#ff4655]" />
+                    <span>Mouse Hardware Profile</span>
+                  </label>
+                  <span className="text-[11px] font-mono text-[#00f5d4]">{mouseWeightGrams}g Mass</span>
+                </div>
+
+                <select
+                  value={mouseProfileId}
+                  onChange={(e) => handleSelectMouse(e.target.value)}
+                  className="w-full bg-[#181d2a] border border-[#283248] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-[#ff4655]"
+                >
+                  {MOUSE_DATABASE.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.weightGrams}g)
+                    </option>
+                  ))}
+                </select>
+
+                {mouseProfileId === 'custom' && (
+                  <div>
+                    <input
+                      type="text"
+                      value={mouseModel}
+                      onChange={(e) => setMouseModel(e.target.value)}
+                      placeholder="Enter custom mouse model name"
+                      className="w-full bg-[#181d2a] border border-[#283248] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#ff4655]"
+                    />
+                  </div>
+                )}
+
+                {/* Weight Slider */}
+                <div>
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+                    <span>Physical Weight Calibration:</span>
+                    <span className="font-mono text-white font-bold">{mouseWeightGrams} grams</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="30"
+                    max="140"
+                    step="1"
+                    value={mouseWeightGrams}
+                    onChange={(e) => setMouseWeightGrams(Number(e.target.value))}
+                    className="w-full accent-[#ff4655] cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-500 mt-0.5 font-mono">
+                    <span>30g Ultralight</span>
+                    <span>70g Mid</span>
+                    <span>140g Heavy</span>
+                  </div>
+                </div>
+
+                {/* Dynamic Physics Card */}
+                <div className="bg-[#0e111a] border border-[#1e2436] rounded-xl p-3 text-xs space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Class:</span>
+                    <span className="font-bold text-[#00f5d4]">{weightDynamics.category}</span>
+                  </div>
+                  <p className="text-slate-300 text-[11px] leading-relaxed">
+                    {weightDynamics.stoppingAdvice}
+                  </p>
+                </div>
               </div>
 
               {/* Calculated eDPI Card */}

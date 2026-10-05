@@ -24,7 +24,9 @@ export function App() {
     return {
       dpi: 800,
       sensitivity: 0.32,
-      mouseModel: 'Logitech G402',
+      mouseProfileId: 'custom',
+      mouseModel: 'Custom / Other Mouse',
+      mouseWeightGrams: 70,
       fov: 103,
       jitterSensitivityThreshold: 1.0,
       soundEnabled: true,
@@ -74,7 +76,11 @@ export function App() {
         {activeTab === 'clip-analyzer' && <ClipAnalyzer />}
         {activeTab === 'diagnostics' && <LiveDiagnostics settings={settings} />}
         {activeTab === 'benchmark' && (
-          <SensBenchmark settings={settings} onUpdateSens={handleUpdateSens} />
+          <SensBenchmark
+            settings={settings}
+            onUpdateSens={handleUpdateSens}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+          />
         )}
       </main>
 
@@ -84,7 +90,7 @@ export function App() {
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#00f5d4]" />
             <span className="font-semibold text-slate-300">STEADYAIM</span>
-            <span>— Built for Calm Gunfight Execution in Valorant & Tactical FPS</span>
+            <span>- Built for Calm Gunfight Execution in Valorant & Tactical FPS</span>
           </div>
 
           <div className="flex items-center gap-6 text-[11px]">

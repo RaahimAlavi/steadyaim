@@ -1,134 +1,164 @@
 import React, { useState } from 'react';
 import type { UserSettings } from '../types';
 import { calculateEDPI, calculateCm360 } from '../utils/aimMath';
-import { Sliders, Cpu, ArrowRight, ShieldCheck, Check } from 'lucide-react';
+import { analyzeWeightDynamics } from '../utils/mouseProfiles';
+import { Sliders, Cpu, ArrowRight, ShieldCheck, Check, Settings2, Feather } from 'lucide-react';
 
 interface SensBenchmarkProps {
   settings: UserSettings;
   onUpdateSens: (newSens: number) => void;
+  onOpenSettings?: () => void;
 }
 
-export const SensBenchmark: React.FC<SensBenchmarkProps> = ({ settings, onUpdateSens }) => {
+export const SensBenchmark: React.FC<SensBenchmarkProps> = ({
+  settings,
+  onUpdateSens,
+  onOpenSettings,
+}) => {
   const currentEdpi = calculateEDPI(settings.dpi, settings.sensitivity);
   const currentCm360 = calculateCm360(settings.dpi, settings.sensitivity);
+  const weight = settings.mouseWeightGrams || 70;
+  const dynamics = analyzeWeightDynamics(weight);
 
   const [activeTrialSens, setActiveTrialSens] = useState<number>(settings.sensitivity);
 
+  // Compute 4 dynamic presets scaled relative to the user's current sensitivity
+  const lowerSens = Number((settings.sensitivity * 0.8).toFixed(2));
+  const medianSens = Number((settings.sensitivity * 0.9).toFixed(2));
+  const agileSens = Number((settings.sensitivity * 1.15).toFixed(2));
 
-  // Common competitive sens presets around user's 256 eDPI
   const presets = [
     {
       label: 'Ultra Steady / High Damping',
-      sens: 0.25,
-      edpi: 200,
-      cm360: calculateCm360(800, 0.25),
-      proUsage: 'yay / Chronicle style',
-      description: 'Significantly dampens physical tremors. Great if your G402 feels too twitchy.',
+      sens: lowerSens,
+      edpi: calculateEDPI(settings.dpi, lowerSens),
+      cm360: calculateCm360(settings.dpi, lowerSens),
+      proUsage: 'yay / Chronicle (~200 eDPI)',
+      description: 'Significantly dampens physical tremors. Calms jitter if your crosshair shakes during micro-adjustments.',
     },
     {
-      label: 'Standard Pro Median',
-      sens: 0.28,
-      edpi: 224,
-      cm360: calculateCm360(800, 0.28),
-      proUsage: 'Aspas / Derke style',
-      description: 'Slightly lower than your current 0.32, gives extra headroom for calm micro-adjustments.',
+      label: 'Tactical Pro Median',
+      sens: medianSens,
+      edpi: calculateEDPI(settings.dpi, medianSens),
+      cm360: calculateCm360(settings.dpi, medianSens),
+      proUsage: 'Aspas / Derke (~230 eDPI)',
+      description: 'Provides extra headroom for smooth micro-glides while maintaining crisp crosshair placement.',
     },
     {
       label: 'Your Current Sens',
-      sens: 0.32,
-      edpi: 256,
+      sens: settings.sensitivity,
+      edpi: currentEdpi,
       cm360: currentCm360,
-      proUsage: 'Balanced Hybrid',
-      description: 'Solid competitive speed. If you shake here, focus on loosening muscle tension.',
+      proUsage: 'Balanced Tactical Hybrid',
+      description: 'Your calibrated speed. If you experience tremor here, prioritize loosening muscle tension and finger grip.',
       isCurrent: true,
     },
     {
       label: 'High Agility Wrist',
-      sens: 0.36,
-      edpi: 288,
-      cm360: calculateCm360(800, 0.36),
-      proUsage: 'TenZ / Jinggg style',
-      description: 'Snappier 180s, but requires elite finger control to avoid end-of-flick wobbles.',
+      sens: agileSens,
+      edpi: calculateEDPI(settings.dpi, agileSens),
+      cm360: calculateCm360(settings.dpi, agileSens),
+      proUsage: 'TenZ / Jinggg (~280+ eDPI)',
+      description: 'Snappier 180 degree clearance, but requires elite finger damping to prevent end-of-flick micro-wobbles.',
     },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Banner */}
-      <div className="bg-[#131622] border border-[#222738] rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      {/* Top Banner */}
+      <div className="bg-[#131622] border border-[#222738] rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="p-1 rounded-md bg-[#ff4655]/20 text-[#ff4655]">
               <Sliders className="w-4 h-4" />
             </span>
             <h2 className="text-base font-bold text-white tracking-wide">
-              Sensitivity & Hardware Stability Guide
+              Hardware Dynamics & Sensitivity Benchmark
             </h2>
           </div>
           <p className="text-xs text-slate-400">
-            Analysis tailored specifically for your <span className="text-white font-semibold">Logitech G402</span>, 
-            <span className="text-white font-semibold"> 800 DPI</span>, and <span className="text-white font-semibold">{settings.sensitivity} Sensitivity</span> (256 eDPI).
+            Calibrated for <span className="text-white font-semibold">{settings.mouseModel || 'Universal Mouse'}</span> ({weight}g),{' '}
+            <span className="text-white font-semibold">{settings.dpi} DPI</span>, and{' '}
+            <span className="text-white font-semibold">{settings.sensitivity} Sens</span> ({currentEdpi} eDPI).
           </p>
         </div>
 
-        <div className="flex items-center gap-3 bg-[#181c28] border border-[#262e42] px-4 py-2 rounded-xl text-xs">
-          <span className="text-slate-400">Current eDPI:</span>
-          <span className="text-sm font-bold font-mono text-[#00f5d4]">{currentEdpi}</span>
-          <span className="text-slate-600">|</span>
-          <span className="text-slate-400">cm/360:</span>
-          <span className="text-sm font-bold font-mono text-slate-200">{currentCm360}cm</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 bg-[#181c28] border border-[#262e42] px-4 py-2 rounded-xl text-xs">
+            <span className="text-slate-400">eDPI:</span>
+            <span className="text-sm font-bold font-mono text-[#00f5d4]">{currentEdpi}</span>
+            <span className="text-slate-600">|</span>
+            <span className="text-slate-400">cm/360:</span>
+            <span className="text-sm font-bold font-mono text-slate-200">{currentCm360}cm</span>
+          </div>
+
+          {onOpenSettings && (
+            <button
+              onClick={onOpenSettings}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1b2133] hover:bg-[#232b40] border border-[#2c3650] text-xs font-semibold text-slate-200 transition-all"
+            >
+              <Settings2 className="w-3.5 h-3.5 text-[#ff4655]" />
+              <span>Change Mouse</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Logitech G402 Hardware Mechanics Analysis */}
+      {/* Dynamic Mouse Hardware Physics Analysis */}
       <div className="bg-[#131622] border border-[#222738] rounded-2xl p-6 shadow-xl">
-        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-[#212638]">
-          <Cpu className="w-5 h-5 text-[#ff4655]" />
-          <h3 className="text-sm font-bold text-white tracking-wide uppercase">
-            Logitech G402 (108g) Physical Mechanics & Why It Shakes
-          </h3>
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#212638]">
+          <div className="flex items-center gap-2">
+            <Cpu className="w-5 h-5 text-[#ff4655]" />
+            <h3 className="text-sm font-bold text-white tracking-wide uppercase">
+              {settings.mouseModel || 'Universal Mouse'} ({weight}g) Physical Mechanics
+            </h3>
+          </div>
+          <span className="text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded bg-[#00f5d4]/10 text-[#00f5d4] border border-[#00f5d4]/30">
+            {dynamics.category}
+          </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {/* Point 1: Weight & Stiction */}
+          {/* Card 1: Mass & Inertia */}
           <div className="bg-[#0b0e16] border border-[#1d2232] rounded-xl p-4 space-y-2">
-            <span className="text-[10px] font-bold tracking-wider text-[#ff4655] uppercase block">
-              1. Weight & Mousepad "Stiction"
+            <span className="text-[10px] font-bold tracking-wider text-[#ff4655] uppercase block flex items-center gap-1.5">
+              <Feather className="w-3.5 h-3.5" />
+              <span>1. Mass & Mousepad Friction</span>
             </span>
-            <h4 className="text-sm font-bold text-white">Static Friction vs Dynamic Friction</h4>
+            <h4 className="text-sm font-bold text-white">Inertia & Static Friction (Stiction)</h4>
             <p className="text-xs text-slate-400 leading-relaxed">
-              At ~108g, the G402 is heavier than ultra-light mice (which are ~55g-63g). When resting still, the mouse skates sink into cloth pads, creating higher static friction ("stiction").
+              {dynamics.inertiaDescription}
             </p>
             <p className="text-xs text-slate-300 bg-[#161a26] p-2.5 rounded-lg border border-[#23293c]">
-              <strong className="text-[#00f5d4]">The Symptom:</strong> You try to make a tiny 3mm adjustment, the mouse resists, you push harder, and suddenly it snaps forward too fast. Loosen your downward palm pressure to let the mouse glide freely.
+              <strong className="text-[#00f5d4]">The Symptom:</strong> If you try to make tiny micro-corrections and the crosshair stutters, you are pressing downward. Ease downward palm pressure so the PTFE skates glide effortlessly.
             </p>
           </div>
 
-          {/* Point 2: Thumb Flare & Muscle Tension */}
+          {/* Card 2: Grip Tension */}
           <div className="bg-[#0b0e16] border border-[#1d2232] rounded-xl p-4 space-y-2">
             <span className="text-[10px] font-bold tracking-wider text-[#ffb703] uppercase block">
-              2. The G402 Thumb Rest & Grip Tension
+              2. The "Death Grip" Muscle Trap
             </span>
-            <h4 className="text-sm font-bold text-white">The "Death Pinch" Trap</h4>
+            <h4 className="text-sm font-bold text-white">Flexor Tendon Tremor</h4>
             <p className="text-xs text-slate-400 leading-relaxed">
-              The G402 has a wide ergonomic thumb flare. Many players accidentally squeeze their thumb into the side wall while stabilizing. Squeezing your thumb fires the flexor pollicis longus tendon, which causes involuntary micro-tremors in your hand.
+              When an enemy swings, adrenaline causes players to involuntarily squeeze the side walls with thumb and pinky. Squeezing activates flexor muscles in your forearm, producing visible crosshair vibration.
             </p>
             <p className="text-xs text-slate-300 bg-[#161a26] p-2.5 rounded-lg border border-[#23293c]">
-              <strong className="text-[#ffb703]">The Fix:</strong> Let your thumb rest lightly on the skirt. Do not push inward into the mouse shell.
+              <strong className="text-[#ffb703]">The Fix:</strong> Hold the mouse like an egg. Keep fingertips relaxed in contact with the shell without pinching inward.
             </p>
           </div>
 
-          {/* Point 3: Wrist Anchor vs Forearm Glide */}
+          {/* Card 3: Stop-Bounce */}
           <div className="bg-[#0b0e16] border border-[#1d2232] rounded-xl p-4 space-y-2">
             <span className="text-[10px] font-bold tracking-wider text-[#00f5d4] uppercase block">
               3. The Stop Bounce (Under-damping)
             </span>
-            <h4 className="text-sm font-bold text-white">Wrist Braking vs Friction Braking</h4>
+            <h4 className="text-sm font-bold text-white">Tendon Braking vs Pad Friction</h4>
             <p className="text-xs text-slate-400 leading-relaxed">
-              When you say <em>"it moves in the end like its not stable"</em>, you are trying to brake with your wrist tendons. When you suddenly lock your wrist muscles to stop, the muscle acts like a stiff spring and vibrates.
+              {dynamics.stoppingAdvice}
             </p>
             <p className="text-xs text-slate-300 bg-[#161a26] p-2.5 rounded-lg border border-[#23293c]">
-              <strong className="text-[#00f5d4]">The Fix:</strong> Decelerate progressively. Let the mousepad friction stop the mouse rather than clenching your muscles.
+              <strong className="text-[#00f5d4]">The Fix:</strong> Decelerate progressively into the target. Imagine gliding the crosshair gently to rest rather than hitting an invisible brick wall.
             </p>
           </div>
         </div>
@@ -138,10 +168,10 @@ export const SensBenchmark: React.FC<SensBenchmarkProps> = ({ settings, onUpdate
       <div className="bg-[#131622] border border-[#222738] rounded-2xl p-6 shadow-xl space-y-5">
         <div>
           <h3 className="text-sm font-bold text-white tracking-wide uppercase mb-1">
-            Sensitivity Benchmark & Trial
+            Sensitivity Trial & Calibration
           </h3>
           <p className="text-xs text-slate-400">
-            Compare your current 0.32 sensitivity against adjacent pro benchmarks. You can switch sensitivities with one click and test how your hand reacts.
+            Compare your current sensitivity against adjacent competitive tiers. Test each preset with 1-click and evaluate how your hand responds in the 3D drills.
           </p>
         </div>
 
@@ -177,7 +207,7 @@ export const SensBenchmark: React.FC<SensBenchmarkProps> = ({ settings, onUpdate
                   </div>
 
                   <div className="text-[11px] text-slate-500 font-mono mb-3">
-                    {p.cm360} cm for 360°
+                    {p.cm360} cm for 360° turn
                   </div>
 
                   <p className="text-xs text-slate-300 leading-relaxed mb-4">
@@ -187,7 +217,7 @@ export const SensBenchmark: React.FC<SensBenchmarkProps> = ({ settings, onUpdate
 
                 <div className="space-y-2 pt-2 border-t border-[#1d2232]">
                   <span className="text-[10px] text-slate-400 block font-mono">
-                    Used by: {p.proUsage}
+                    Tier: {p.proUsage}
                   </span>
 
                   <button
@@ -224,11 +254,11 @@ export const SensBenchmark: React.FC<SensBenchmarkProps> = ({ settings, onUpdate
           <ShieldCheck className="w-5 h-5 text-[#00f5d4] shrink-0 mt-0.5" />
           <div>
             <span className="font-bold text-white block mb-1">
-              Final Recommendation for your G402:
+              Esports Coach Diagnostics for {settings.mouseModel || 'your mouse'}:
             </span>
             <p className="text-slate-300 leading-relaxed">
-              Your <strong>0.32 sens (256 eDPI)</strong> is in the golden zone. You do <em>not</em> need to drastically slash your sensitivity.
-              Instead, test lowering to <strong>0.28 sens (224 eDPI)</strong> for 2 days. At 224 eDPI, the weight of the G402 naturally absorbs tiny involuntary finger tremors, making calm micro-adjustments feel locked-in.
+              Your <strong>{settings.sensitivity} sensitivity ({currentEdpi} eDPI)</strong> is within the competitive sweet spot. You do <em>not</em> need to drastically slash your sensitivity.
+              Focus primarily on feather-light grip pressure. If micro-tremors persist during clutch rounds, testing a 10% lower sensitivity ({medianSens}) can provide extra natural physical damping.
             </p>
           </div>
         </div>

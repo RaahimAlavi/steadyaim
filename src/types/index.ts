@@ -1,7 +1,19 @@
+export interface MouseProfile {
+  id: string;
+  name: string;
+  brand: string;
+  weightGrams: number;
+  category: 'Ultralight (<60g)' | 'Midweight (60-85g)' | 'Heavy (>85g)';
+  stictionProfile: 'Low Glide Resistance' | 'Balanced Control' | 'High Stiction / Inertia';
+  coachingTip: string;
+}
+
 export interface UserSettings {
   dpi: number;
   sensitivity: number;
+  mouseProfileId: string;
   mouseModel: string;
+  mouseWeightGrams: number;
   fov: number; // 103 for Valorant
   jitterSensitivityThreshold: number; // threshold to trigger tension warning
   soundEnabled: boolean;
