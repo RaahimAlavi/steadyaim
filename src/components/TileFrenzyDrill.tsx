@@ -489,18 +489,24 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
         className="w-full h-full cursor-none block absolute inset-0 z-0"
       />
 
-      {/* Dynamic Subtle Vignette during active gameplay for tunnel focus */}
+      {/* Dynamic Deep Eye-Friendly Vignette during active gameplay */}
       {isPlaying && !isPaused && (
-        <div className="absolute inset-0 pointer-events-none z-10 bg-radial-[circle_at_center,_transparent_55%,_rgba(4,7,14,0.8)_100%]" />
+        <div className="absolute inset-0 pointer-events-none z-10 bg-radial-[circle_at_center,_transparent_35%,_rgba(3,5,10,0.92)_100%]" />
       )}
 
-      {/* Minimal Green/Cyan Crosshair '+' with Hitmarker Feedback */}
+      {/* Minimal Tactical Crosshair '+' with Hitmarker Feedback */}
       {isPlaying && !isPaused && (
         <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-20">
           <div ref={crosshairRef} className="relative w-8 h-8 flex items-center justify-center">
-            {/* Center '+' Crosshair */}
-            <div className="absolute w-[12px] h-[1.75px] bg-[#00f5d4] shadow-sm" />
-            <div className="absolute h-[12px] w-[1.75px] bg-[#00f5d4] shadow-sm" />
+            {/* Center '+' Crosshair (Comfortable non-glaring cyan/emerald) */}
+            <div
+              className="absolute w-[12px] h-[1.75px]"
+              style={{ backgroundColor: settings.crosshairColor || '#38bdf8' }}
+            />
+            <div
+              className="absolute h-[12px] w-[1.75px]"
+              style={{ backgroundColor: settings.crosshairColor || '#38bdf8' }}
+            />
 
             {/* Hitmarker Flash Feedback on confirmed hit */}
             {hitmarkerActive && (

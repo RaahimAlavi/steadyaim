@@ -19,15 +19,15 @@ export const Hero3DCanvas: React.FC = () => {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
-    // Ambient and directional lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    // Ambient and directional lighting (soft, comfortable)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
     scene.add(ambientLight);
 
-    const keyLight = new THREE.PointLight(0x00f5d4, 4, 15);
+    const keyLight = new THREE.PointLight(0x00f5d4, 1.2, 10);
     keyLight.position.set(-2, 3, 3);
     scene.add(keyLight);
 
-    const rimLight = new THREE.PointLight(0xff4655, 3.5, 15);
+    const rimLight = new THREE.PointLight(0xff4655, 0.9, 10);
     rimLight.position.set(2, 2, -1);
     scene.add(rimLight);
 
@@ -38,16 +38,16 @@ export const Hero3DCanvas: React.FC = () => {
     const torsoGeo = new THREE.CylinderGeometry(0.3, 0.22, 1.0, 16);
     const torsoMat = new THREE.MeshStandardMaterial({
       color: 0x161a26,
-      roughness: 0.3,
-      metalness: 0.8,
+      roughness: 0.5,
+      metalness: 0.5,
     });
     const torso = new THREE.Mesh(torsoGeo, torsoMat);
     torso.position.y = 1.0;
     botGroup.add(torso);
 
-    // Chest Core Reactor (Glowing cyan)
+    // Chest Core Reactor (Soft cyan)
     const coreGeo = new THREE.SphereGeometry(0.1, 16, 16);
-    const coreMat = new THREE.MeshBasicMaterial({ color: 0x00f5d4 });
+    const coreMat = new THREE.MeshBasicMaterial({ color: 0x0ea5e9 });
     const core = new THREE.Mesh(coreGeo, coreMat);
     core.position.set(0, 1.15, 0.22);
     botGroup.add(core);
@@ -56,10 +56,10 @@ export const Hero3DCanvas: React.FC = () => {
     const headGeo = new THREE.SphereGeometry(0.24, 24, 24);
     const headMat = new THREE.MeshStandardMaterial({
       color: 0xff4655,
-      emissive: 0xff4655,
-      emissiveIntensity: 0.5,
-      roughness: 0.2,
-      metalness: 0.6,
+      emissive: 0x991b1b,
+      emissiveIntensity: 0.15,
+      roughness: 0.45,
+      metalness: 0.3,
     });
     const head = new THREE.Mesh(headGeo, headMat);
     head.position.y = 1.75;
@@ -68,7 +68,7 @@ export const Hero3DCanvas: React.FC = () => {
 
     // Floating Target Ring around Head
     const haloGeo = new THREE.TorusGeometry(0.36, 0.02, 16, 48);
-    const haloMat = new THREE.MeshBasicMaterial({ color: 0x00f5d4 });
+    const haloMat = new THREE.MeshBasicMaterial({ color: 0x0284c7 });
     const halo = new THREE.Mesh(haloGeo, haloMat);
     halo.position.y = 1.75;
     botGroup.add(halo);

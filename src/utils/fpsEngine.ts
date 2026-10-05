@@ -49,8 +49,9 @@ export class FPSEngine {
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0a0c12);
-    this.scene.fog = new THREE.FogExp2(0x0a0c12, 0.035); // Add infinite digital expanse fog
+    // Dim, eye-friendly matte obsidian background and atmospheric fog
+    this.scene.background = new THREE.Color(0x05070d);
+    this.scene.fog = new THREE.FogExp2(0x05070d, 0.045);
 
     // Initial camera with Valorant horizontal FOV (103 deg)
     const aspect = canvas.clientWidth / canvas.clientHeight || 16 / 9;
@@ -70,12 +71,12 @@ export class FPSEngine {
     // Post-Processing Setup
     const renderScene = new RenderPass(this.scene, this.camera);
     
-    // Bloom (Resolution, strength, radius, threshold)
+    // Very subtle, comfortable bloom (prevents blinding neon glare)
     const bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      1.1, // strength
-      0.6, // radius
-      0.2  // threshold
+      0.15, // Low, soft strength
+      0.3,  // Narrow radius
+      0.85  // High threshold so normal objects never bloom
     );
     
     const outputPass = new OutputPass();
@@ -90,8 +91,8 @@ export class FPSEngine {
     this.raycaster.params.Points = { threshold: 0 };
     this.centerCoord = new THREE.Vector2(0, 0); // Exactly screen center
 
-    // Muzzle flash light attached to camera
-    this.muzzleLight = new THREE.PointLight(0xffffff, 0, 16);
+    // Subtle muzzle flash light attached to camera (gentle, not blinding)
+    this.muzzleLight = new THREE.PointLight(0xdbeafe, 0, 10);
     this.muzzleLight.position.set(0.2, -0.2, -0.6);
     this.camera.add(this.muzzleLight);
     this.scene.add(this.camera);
@@ -126,43 +127,43 @@ export class FPSEngine {
    * Builds high-tech esports tactical shooting range environment (matching 3D Aim Trainer benchmark)
    */
   private buildTacticalRange() {
-    // 1. Clean Industrial Shooting Bay Lighting
-    const ambientLight = new THREE.AmbientLight(0x384560, 2.6);
+    // 1. Soft, Eye-Friendly Ambient & Directional Lighting
+    const ambientLight = new THREE.AmbientLight(0x182030, 0.95);
     this.scene.add(ambientLight);
 
-    // Overhead stadium key downlight
-    const keyLight = new THREE.DirectionalLight(0xf1f5f9, 3.2);
+    // Overhead stadium key downlight (softly illuminated, not piercing)
+    const keyLight = new THREE.DirectionalLight(0x94a3b8, 1.15);
     keyLight.position.set(0, 8.0, -2);
     this.scene.add(keyLight);
 
     // Dedicated Firing Wall Key Illuminator
-    const wallLight = new THREE.DirectionalLight(0xdbeafe, 2.6);
+    const wallLight = new THREE.DirectionalLight(0x64748b, 0.85);
     wallLight.position.set(0, 4.0, 4);
     this.scene.add(wallLight);
 
     // 2. Industrial Modular Floor (y = 0, z from 0 to -10m)
     const floorGeo = new THREE.PlaneGeometry(36, 22);
     const floorMat = new THREE.MeshStandardMaterial({
-      color: 0x161d2a,
-      roughness: 0.65,
-      metalness: 0.35,
+      color: 0x0c101a,
+      roughness: 0.8,
+      metalness: 0.2,
     });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(0, 0, -5);
     this.scene.add(floor);
 
-    // Floor tactical grid seams
-    const gridHelper = new THREE.GridHelper(36, 36, 0x242f45, 0x1b2334);
+    // Floor tactical grid seams (low contrast, easy on eyes)
+    const gridHelper = new THREE.GridHelper(36, 36, 0x161e2e, 0x0f1422);
     gridHelper.position.set(0, 0.01, -5);
     this.scene.add(gridHelper);
 
     // 3. Back Firing Wall (Tactical Steel Panels at z = -10.0m, height 14m spanning y = -2m to 12m)
     const wallGeo = new THREE.PlaneGeometry(36, 14.0);
     const wallMat = new THREE.MeshStandardMaterial({
-      color: 0x283347,
-      roughness: 0.7,
-      metalness: 0.32,
+      color: 0x131a26,
+      roughness: 0.85,
+      metalness: 0.18,
     });
     const backWall = new THREE.Mesh(wallGeo, wallMat);
     backWall.position.set(0, 5.0, -10.0);
@@ -172,9 +173,9 @@ export class FPSEngine {
     [-12, -8, -4, 0, 4, 8, 12].forEach((x) => {
       const seamGeo = new THREE.BoxGeometry(0.22, 14.0, 0.08);
       const seamMat = new THREE.MeshStandardMaterial({
-        color: 0x3d4d6a,
-        roughness: 0.55,
-        metalness: 0.5,
+        color: 0x1c2436,
+        roughness: 0.7,
+        metalness: 0.3,
       });
       const seam = new THREE.Mesh(seamGeo, seamMat);
       seam.position.set(x, 5.0, -9.95);
@@ -185,9 +186,9 @@ export class FPSEngine {
     [3.6, 6.8].forEach((y) => {
       const railGeo = new THREE.BoxGeometry(36, 0.18, 0.1);
       const railMat = new THREE.MeshStandardMaterial({
-        color: 0x3d4d6a,
-        roughness: 0.55,
-        metalness: 0.5,
+        color: 0x1c2436,
+        roughness: 0.7,
+        metalness: 0.3,
       });
       const rail = new THREE.Mesh(railGeo, railMat);
       rail.position.set(0, y, -9.94);
@@ -197,9 +198,9 @@ export class FPSEngine {
     // Industrial overhead ventilation pipe
     const pipeGeo = new THREE.CylinderGeometry(0.28, 0.28, 36, 24);
     const pipeMat = new THREE.MeshStandardMaterial({
-      color: 0x3b4a64,
-      roughness: 0.45,
-      metalness: 0.65,
+      color: 0x1e283a,
+      roughness: 0.6,
+      metalness: 0.4,
     });
     const pipe = new THREE.Mesh(pipeGeo, pipeMat);
     pipe.rotation.z = Math.PI / 2;
@@ -209,8 +210,8 @@ export class FPSEngine {
     // 4. Industrial Overhead Catwalk & Roof Girders
     const ceilingGeo = new THREE.PlaneGeometry(36, 22);
     const ceilingMat = new THREE.MeshStandardMaterial({
-      color: 0x1b2332,
-      roughness: 0.75,
+      color: 0x0a0e16,
+      roughness: 0.9,
       side: THREE.DoubleSide,
     });
     const ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
@@ -312,25 +313,25 @@ export class FPSEngine {
   public createCobaltTargetMesh(): { group: THREE.Group; headMesh: THREE.Mesh } {
     const group = new THREE.Group();
 
-    // 1. Cobalt Blue Shaded Sphere
+    // 1. Cobalt Blue Shaded Sphere (Matte, non-glaring)
     const sphereGeo = new THREE.SphereGeometry(0.48, 32, 32);
     const sphereMat = new THREE.MeshStandardMaterial({
       color: 0x1d4ed8,
       emissive: 0x1e3a8a,
-      emissiveIntensity: 0.35,
-      roughness: 0.25,
-      metalness: 0.5,
+      emissiveIntensity: 0.1,
+      roughness: 0.45,
+      metalness: 0.25,
     });
     const sphereMesh = new THREE.Mesh(sphereGeo, sphereMat);
     sphereMesh.name = 'head';
     group.add(sphereMesh);
 
-    // 2. Subtle Precision Latitude/Longitude Wireframe
+    // 2. Subtle Precision Latitude/Longitude Wireframe (Calm, low opacity)
     const wireGeo = new THREE.WireframeGeometry(new THREE.SphereGeometry(0.483, 16, 16));
     const wireMat = new THREE.LineBasicMaterial({
-      color: 0x93c5fd,
+      color: 0x60a5fa,
       transparent: true,
-      opacity: 0.22,
+      opacity: 0.14,
     });
     const wireMesh = new THREE.LineSegments(wireGeo, wireMat);
     wireMesh.raycast = () => {}; // Never participate in hit raycasting
@@ -496,51 +497,49 @@ export class FPSEngine {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.font = 'bold 48px sans-serif';
+    ctx.font = 'bold 44px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#00f5d4'; // neon cyan
-    ctx.shadowColor = '#00f5d4';
-    ctx.shadowBlur = 10;
+    ctx.fillStyle = '#67e8f9'; // soft, readable cyan without blinding glare
     ctx.fillText(text, 128, 80);
 
     const tex = new THREE.CanvasTexture(canvas);
-    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, opacity: 0.85 });
     const sprite = new THREE.Sprite(mat);
     
     // Scale and position
-    sprite.scale.set(1.5, 0.75, 1.5);
+    sprite.scale.set(1.2, 0.6, 1.2);
     sprite.position.copy(pos);
-    sprite.position.y += 0.4; // float above target
+    sprite.position.y += 0.35; // float above target
 
     this.scene.add(sprite);
-    this.floatTexts.push({ sprite, life: 0, maxLife: 800 });
+    this.floatTexts.push({ sprite, life: 0, maxLife: 700 });
   }
 
   /**
-   * Spawns high-energy neon shatter particles on target break
+   * Spawns clean shatter particles on target break (matte, non-blinding)
    */
   private spawnShatterParticles(pos: THREE.Vector3) {
-    const pGeo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
+    const pGeo = new THREE.BoxGeometry(0.065, 0.065, 0.065);
     const blueMat = new THREE.MeshStandardMaterial({ 
-      color: 0x3b82f6, 
-      emissive: 0x3b82f6, 
-      emissiveIntensity: 3.0,
-      roughness: 0.1
+      color: 0x2563eb, 
+      emissive: 0x1d4ed8, 
+      emissiveIntensity: 0.35,
+      roughness: 0.5
     });
     const orangeMat = new THREE.MeshStandardMaterial({ 
-      color: 0xf97316, 
-      emissive: 0xf97316, 
-      emissiveIntensity: 4.0,
-      roughness: 0.1
+      color: 0xea580c, 
+      emissive: 0xc2410c, 
+      emissiveIntensity: 0.45,
+      roughness: 0.5
     });
     const whiteMat = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      emissive: 0xffffff,
-      emissiveIntensity: 5.0,
-      roughness: 0.1
+      color: 0xe2e8f0,
+      emissive: 0x94a3b8, 
+      emissiveIntensity: 0.4,
+      roughness: 0.5
     });
 
-    for (let i = 0; i < 32; i++) {
+    for (let i = 0; i < 20; i++) {
       let mat = blueMat;
       if (i % 4 === 0) mat = orangeMat;
       else if (i % 7 === 0) mat = whiteMat;
@@ -550,9 +549,9 @@ export class FPSEngine {
 
       // Explosive outward velocity
       const vel = new THREE.Vector3(
-        (Math.random() - 0.5) * 14,
-        (Math.random() - 0.2) * 10,
-        (Math.random() - 0.5) * 14
+        (Math.random() - 0.5) * 11,
+        (Math.random() - 0.2) * 8,
+        (Math.random() - 0.5) * 11
       );
 
       this.scene.add(pMesh);
@@ -560,7 +559,7 @@ export class FPSEngine {
         mesh: pMesh,
         velocity: vel,
         life: 0,
-        maxLife: 300 + Math.random() * 250, // ms
+        maxLife: 280 + Math.random() * 200, // ms
       });
     }
   }

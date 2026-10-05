@@ -53,8 +53,8 @@ export const HeroLanding: React.FC<HeroLandingProps> = ({
       {/* Background Interactive 3D Canvas */}
       <Hero3DCanvas />
 
-      {/* Subtle Radial Vignette Gradient (Doesn't block 3D canvas interaction) */}
-      <div className="absolute inset-0 bg-radial-[circle_at_center,_transparent_40%,_#07090ef0_95%] pointer-events-none z-10" />
+      {/* Eye-Friendly Matte Obsidian Vignette (Dims harsh 3D lights) */}
+      <div className="absolute inset-0 bg-radial-[circle_at_center,_transparent_30%,_#05070dfa_90%] pointer-events-none z-10" />
 
       {/* Top Telemetry & Global Metrics Strip */}
       <div className="relative z-20 w-full pt-6 px-6 max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-4 pointer-events-none">
