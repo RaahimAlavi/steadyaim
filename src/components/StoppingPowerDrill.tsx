@@ -3,46 +3,56 @@ import type { UserSettings, DrillResult, TargetShotDetail } from '../types';
 import { FPSEngine } from '../utils/fpsEngine';
 import { MotionTracker } from '../utils/motionAnalytics';
 import { sounds } from '../utils/soundEffects';
-import { HUDCrosshair } from './HUDCrosshair';
+import { storageEngine } from '../utils/storageEngine';
+import { PauseMenu } from './PauseMenu';
 import { ResultModal } from './ResultModal';
-import gsap from 'gsap';
 import {
-  ShieldAlert,
   Play,
-  Crosshair,
   Maximize2,
-  Minimize2,
+  Star,
+  ShieldAlert,
   AlertTriangle,
-  RotateCcw,
-  Zap,
 } from 'lucide-react';
 
 interface StoppingPowerDrillProps {
   settings: UserSettings;
   onOpenSettings: () => void;
+  onExitDrill?: () => void;
 }
 
 export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
   settings,
   onOpenSettings,
+  onExitDrill,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fpsEngineRef = useRef<FPSEngine | null>(null);
   const motionTrackerRef = useRef<MotionTracker>(new MotionTracker());
 
-  const bounceNotificationRef = useRef<HTMLDivElement | null>(null);
-
   const [isLocked, setIsLocked] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);
+  const [hitmarkerActive, setHitmarkerActive] = useState(false);
 
+  // Drill progression (15 flick targets)
   const totalTargetsInRound = 15;
-  const [currentTargetIndex, setCurrentTargetIndex] = useState(0);
+  const [currentTargetIndex, setCurrentTargetIndex] = useState(1);
   const [hitsCount, setHitsCount] = useState(0);
+  const [missesCount, setMissesCount] = useState(0);
   const [stopBouncesCount, setStopBouncesCount] = useState(0);
+  const [score, setScore] = useState(0);
 
+  // Stop bounce notification state
+  const [isBounceAlertActive, setIsBounceAlertActive] = useState(false);
+  const bounceTimerRef = useRef<number | null>(null);
+
+  // Lock tracking ref to avoid false pause on launch
+  const hasEngagedLockRef = useRef(false);
+
+  // Telemetry
   const targetSpawnTimeRef = useRef<number>(0);
   const shotDetailsRef = useRef<TargetShotDetail[]>([]);
   const [lastResult, setLastResult] = useState<DrillResult | null>(null);
@@ -64,53 +74,74 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
     };
   }, []);
 
-  // Listen to Fullscreen changes
+  // Fullscreen change listener
   useEffect(() => {
     const handleFullscreenChange = () => {
-      const active = Boolean(document.fullscreenElement);
-      setIsFullscreen(active);
+      setIsFullscreen(Boolean(document.fullscreenElement));
       setTimeout(() => {
         fpsEngineRef.current?.resize();
-      }, 50);
+      }, 60);
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    };
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  const toggleFullscreen = useCallback(() => {
-    if (!document.fullscreenElement) {
-      containerRef.current?.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
-    }
-  }, []);
-
+  // Lock handling
   const requestLock = useCallback(() => {
-    if (canvasRef.current) {
+    if (canvasRef.current && !isPaused) {
       canvasRef.current.requestPointerLock();
     }
-  }, []);
+  }, [isPaused]);
 
   useEffect(() => {
     const handleLockChange = () => {
-      setIsLocked(document.pointerLockElement === canvasRef.current);
+      const locked = document.pointerLockElement === canvasRef.current;
+      setIsLocked(locked);
+
+      if (locked) {
+        hasEngagedLockRef.current = true;
+      } else {
+        // Only trigger pause if pointer lock was actively engaged during round
+        if (hasEngagedLockRef.current && isPlaying && !showResultModal && !isPaused) {
+          setIsPaused(true);
+        }
+        hasEngagedLockRef.current = false;
+      }
     };
+
     document.addEventListener('pointerlockchange', handleLockChange);
     return () => document.removeEventListener('pointerlockchange', handleLockChange);
-  }, []);
+  }, [isPlaying, showResultModal, isPaused]);
 
-  // Spawn wide flick target in 3D
+  // Keyboard shortcut listener for Pause (Escape / Tab) and Quick Restart (Y)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'KeyY' && isPlaying) {
+        restartDrill();
+      } else if (e.code === 'Tab' && isPlaying) {
+        e.preventDefault();
+        if (isPaused) {
+          resumeDrill();
+        } else {
+          pauseDrill();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPlaying, isPaused]);
+
+  // Spawn wide flick target in 3D arena
   const spawnNext3DFlickTarget = useCallback((index: number) => {
     if (!fpsEngineRef.current) return;
 
-    // Wider angle: 16 to 32 degrees (0.28 to 0.55 radians) left or right
+    // Wider angle: 14 to 28 degrees left or right to challenge stopping deceleration
     const dir = Math.random() > 0.5 ? 1 : -1;
-    const yawOffset = dir * (0.28 + Math.random() * 0.25);
+    const yawOffset = dir * (0.24 + Math.random() * 0.22);
     const pitchOffset = (Math.random() - 0.5) * 0.08;
-    const distance = 11 + (Math.random() - 0.5) * 2;
+    const distance = 8.6; // In front of back wall at -9.0m
 
     fpsEngineRef.current.spawnTarget(yawOffset, pitchOffset, distance, 'flick');
     targetSpawnTimeRef.current = performance.now();
@@ -118,6 +149,7 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
     motionTrackerRef.current.clearHistory();
   }, []);
 
+  // Finish round & persist results
   const finishDrill = useCallback(() => {
     setIsPlaying(false);
     sounds.playSuccess();
@@ -127,7 +159,7 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
     }
 
     const shots = shotDetailsRef.current;
-    const hits = shots.filter((s) => s.hit).length;
+    const hits = hitsCount;
     const accuracy = Math.round((hits / totalTargetsInRound) * 100);
 
     const avgDecel =
@@ -146,13 +178,29 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
     else if (accuracy >= 55) grade = 'B';
     else grade = 'C';
 
+    const starsEarned = score >= 2500 ? 3 : score >= 1800 ? 2 : score >= 1000 ? 1 : 0;
+
+    // Save session to database
+    storageEngine.recordSession({
+      drillType: 'stopping-power',
+      drillName: 'Stopping Power Snap Deceleration',
+      score,
+      starsEarned,
+      accuracy,
+      avgReactionMs: avgReaction,
+      jitterVariancePx: Number(((100 - avgDecel) * 0.05).toFixed(1)),
+    });
+
+    // Save stars to node 2
+    storageEngine.saveNodeStars(2, starsEarned);
+
     const result: DrillResult = {
       id: `stopping-${Date.now()}`,
       drillType: 'stopping-power',
       timestamp: Date.now(),
       totalTargets: totalTargetsInRound,
       hits,
-      misses: totalTargetsInRound - hits,
+      misses: missesCount,
       accuracy,
       avgJitterScore: avgDecel,
       tenseAlertsCount: stopBouncesCount,
@@ -164,23 +212,66 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
 
     setLastResult(result);
     setShowResultModal(true);
-  }, [stopBouncesCount, totalTargetsInRound]);
+  }, [hitsCount, missesCount, stopBouncesCount, score, totalTargetsInRound]);
 
+  // Start Drill (Auto-Fullscreen enabled)
   const startDrill = () => {
     setIsPlaying(true);
+    setIsPaused(false);
     setShowResultModal(false);
     setHitsCount(0);
+    setMissesCount(0);
     setStopBouncesCount(0);
+    setScore(0);
+    hasEngagedLockRef.current = false;
     shotDetailsRef.current = [];
 
-    requestLock();
+    fpsEngineRef.current?.clearTargets();
+
+    // Auto-enter fullscreen
+    if (containerRef.current && !document.fullscreenElement) {
+      containerRef.current
+        .requestFullscreen()
+        .then(() => {
+          setTimeout(() => {
+            canvasRef.current?.requestPointerLock();
+          }, 80);
+        })
+        .catch(() => {
+          canvasRef.current?.requestPointerLock();
+        });
+    } else {
+      canvasRef.current?.requestPointerLock();
+    }
+
     setTimeout(() => {
       spawnNext3DFlickTarget(1);
-    }, 100);
+    }, 120);
   };
 
+  const pauseDrill = () => {
+    setIsPaused(true);
+    if (document.pointerLockElement) {
+      document.exitPointerLock();
+    }
+  };
+
+  const resumeDrill = () => {
+    setIsPaused(false);
+    hasEngagedLockRef.current = false;
+    setTimeout(() => {
+      canvasRef.current?.requestPointerLock();
+    }, 50);
+  };
+
+  const restartDrill = () => {
+    setIsPaused(false);
+    startDrill();
+  };
+
+  // Fire Weapon Handler
   const handleFire = useCallback(() => {
-    if (!isPlaying || !fpsEngineRef.current) return;
+    if (!isPlaying || isPaused || !fpsEngineRef.current) return;
 
     const confirmTime = Math.round(performance.now() - targetSpawnTimeRef.current);
     const stroke = motionTrackerRef.current.flushStroke();
@@ -191,20 +282,25 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
       setStopBouncesCount((prev) => prev + 1);
       sounds.playTensionAlert();
 
-      if (bounceNotificationRef.current) {
-        gsap.fromTo(
-          bounceNotificationRef.current,
-          { y: -15, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.25, ease: 'power2.out' }
-        );
-      }
+      setIsBounceAlertActive(true);
+      if (bounceTimerRef.current) clearTimeout(bounceTimerRef.current);
+      bounceTimerRef.current = window.setTimeout(() => {
+        setIsBounceAlertActive(false);
+      }, 450);
     }
 
     const { isHit } = fpsEngineRef.current.checkHit();
 
     if (isHit) {
-      sounds.playHeadshot();
       setHitsCount((prev) => prev + 1);
+      // Clean deceleration gives maximum score
+      const decelBonus = stopBounce ? 0 : 50;
+      const speedBonus = Math.max(0, Math.round((550 - confirmTime) * 0.25));
+      const pointsEarned = 150 + decelBonus + speedBonus;
+      setScore((s) => s + pointsEarned);
+
+      setHitmarkerActive(true);
+      setTimeout(() => setHitmarkerActive(false), 90);
 
       shotDetailsRef.current.push({
         shotNumber: currentTargetIndex,
@@ -221,6 +317,7 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
       }
     } else {
       sounds.playMiss();
+      setMissesCount((prev) => prev + 1);
 
       shotDetailsRef.current.push({
         shotNumber: currentTargetIndex,
@@ -230,10 +327,11 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
         stopBounce,
       });
     }
-  }, [isPlaying, currentTargetIndex, totalTargetsInRound, finishDrill, spawnNext3DFlickTarget]);
+  }, [isPlaying, isPaused, currentTargetIndex, totalTargetsInRound, finishDrill, spawnNext3DFlickTarget]);
 
+  // Mouse Movement & Tracking
   useEffect(() => {
-    if (!isLocked) return;
+    if (!isLocked || !isPlaying || isPaused) return;
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!fpsEngineRef.current) return;
@@ -242,8 +340,12 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
     };
 
     const handleMouseDown = (e: MouseEvent) => {
-      if (e.button === 0 && isPlaying) {
-        handleFire();
+      if (e.button === 0) {
+        if (!isLocked) {
+          requestLock();
+        } else {
+          handleFire();
+        }
       }
     };
 
@@ -254,201 +356,163 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mousedown', handleMouseDown);
     };
-  }, [isLocked, isPlaying, settings.sensitivity, handleFire]);
+  }, [isLocked, isPlaying, isPaused, settings.sensitivity, handleFire, requestLock]);
+
+  // Live Star Calculation (1 Star: 1,000, 2 Stars: 1,800, 3 Stars: 2,500)
+  const currentStars = score >= 2500 ? 3 : score >= 1800 ? 2 : score >= 1000 ? 1 : 0;
+  const starProgressPercent = Math.min(100, Math.round((score / 2500) * 100));
 
   return (
     <div
       ref={containerRef}
-      className={`space-y-6 transition-all ${
+      className={`relative w-full flex flex-col justify-between bg-[#080b12] text-white select-none ${
         isFullscreen
-          ? 'fixed inset-0 z-50 w-screen h-screen bg-[#07090e] p-4 flex flex-col justify-between space-y-0 overflow-hidden'
-          : ''
+          ? 'h-screen p-0 m-0 fixed inset-0 z-50'
+          : 'h-[620px] rounded-3xl border border-[#1e263d] overflow-hidden'
       }`}
     >
-      {/* Top Banner */}
-      <div className="bg-[#121520] border border-[#23293c] rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#ff4655]/20 border border-[#ff4655]/40 flex items-center justify-center text-[#ff4655] shadow-lg shadow-[#ff4655]/15">
-            <ShieldAlert className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-black text-white tracking-wide uppercase">
-                3D STOPPING POWER & ANTI-BOUNCE DRILL
-              </h2>
-              <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-[#00f5d4]/20 text-[#00f5d4] border border-[#00f5d4]/30 font-mono">
-                1:1 CAMERA
-              </span>
-            </div>
-            <p className="text-xs text-slate-400">
-              Flick to wide angles and brake cleanly on the head without wrist rebound.
-            </p>
+      {/* 3D WebGL Canvas */}
+      <canvas
+        ref={canvasRef}
+        onClick={!isPlaying ? startDrill : requestLock}
+        className="w-full h-full cursor-none block absolute inset-0 z-0"
+      />
+
+      {/* Stop Bounce Warning Alert Pill */}
+      {isBounceAlertActive && isPlaying && !isPaused && (
+        <div className="absolute top-8 inset-x-0 pointer-events-none flex justify-center z-20 animate-in fade-in zoom-in-95 duration-150">
+          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 text-xs font-mono font-bold tracking-wider uppercase backdrop-blur-md">
+            <AlertTriangle className="w-3.5 h-3.5" />
+            <span>OVERSHOOT BOUNCE DETECTED - SNAP TO DEAD STOP</span>
           </div>
         </div>
+      )}
 
-        <div className="flex items-center gap-3">
-          <div className="bg-[#0b0e16] border border-[#1e2436] rounded-xl px-3.5 py-1.5 text-center">
-            <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider block">Target</span>
-            <span className="text-sm font-black font-mono text-white">
-              {isPlaying ? `${currentTargetIndex} / ${totalTargetsInRound}` : `0 / ${totalTargetsInRound}`}
-            </span>
-          </div>
+      {/* Minimal Green/Cyan Crosshair '+' with Hitmarker Feedback */}
+      {isPlaying && !isPaused && (
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
+          <div className="relative w-8 h-8 flex items-center justify-center">
+            {/* Center '+' Crosshair */}
+            <div className="absolute w-[12px] h-[1.75px] bg-[#00f5d4] shadow-sm" />
+            <div className="absolute h-[12px] w-[1.75px] bg-[#00f5d4] shadow-sm" />
 
-          <div className="bg-[#0b0e16] border border-[#1e2436] rounded-xl px-3.5 py-1.5 text-center">
-            <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider block">Hits</span>
-            <span className="text-sm font-black font-mono text-[#00f5d4]">
-              {hitsCount}
-            </span>
-          </div>
-
-          <div className="bg-[#0b0e16] border border-[#1e2436] rounded-xl px-3.5 py-1.5 text-center">
-            <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider block">Stop Bounces</span>
-            <span className={`text-sm font-black font-mono ${stopBouncesCount > 0 ? 'text-[#ff4655]' : 'text-[#00f5d4]'}`}>
-              {stopBouncesCount}
-            </span>
-          </div>
-
-          <button
-            onClick={toggleFullscreen}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1a2133] hover:bg-[#232b40] border border-[#2b3752] text-xs font-bold text-slate-200 hover:text-white transition-all shadow-md ml-1"
-            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Aim Lab Fullscreen Focus Mode'}
-          >
-            {isFullscreen ? (
-              <>
-                <Minimize2 className="w-3.5 h-3.5 text-[#00f5d4]" />
-                <span className="hidden sm:inline">Exit Fullscreen</span>
-              </>
-            ) : (
-              <>
-                <Maximize2 className="w-3.5 h-3.5 text-[#00f5d4]" />
-                <span className="hidden sm:inline">Fullscreen Focus</span>
-              </>
+            {/* Hitmarker Flash Feedback on confirmed hit */}
+            {hitmarkerActive && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="absolute w-3.5 h-[1.5px] bg-amber-400 rotate-45" />
+                <div className="absolute w-3.5 h-[1.5px] bg-amber-400 -rotate-45" />
+              </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Center Bottom HUD matching Screenshot 2 (3D Aim Trainer benchmark) */}
+      {isPlaying && !isPaused && (
+        <div className="absolute bottom-6 inset-x-0 pointer-events-none flex flex-col items-center justify-end z-20">
+          {/* Target Progress Counter */}
+          <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-blue-400 mb-1">
+            <ShieldAlert className="w-3.5 h-3.5 text-blue-400" />
+            <span>TARGET {currentTargetIndex} / {totalTargetsInRound}</span>
+          </div>
+
+          {/* Large Bold Points Number */}
+          <div className="text-4xl font-black text-white font-mono tracking-tight leading-none mb-0.5">
+            {score}
+          </div>
+          <span className="text-[10px] font-mono tracking-widest text-slate-400 uppercase mb-2">
+            POINTS
+          </span>
+
+          {/* Star Progression Track matching Screenshot 2 */}
+          <div className="flex flex-col items-center gap-1 w-36">
+            <div className="flex items-center justify-between w-full px-2">
+              {[1, 2, 3].map((starIdx) => (
+                <Star
+                  key={starIdx}
+                  className={`w-4 h-4 transition-colors ${
+                    currentStars >= starIdx
+                      ? 'fill-amber-400 text-amber-400'
+                      : 'text-slate-600 fill-transparent'
+                  }`}
+                />
+              ))}
+            </div>
+            {/* Progress line underneath */}
+            <div className="w-full h-1 bg-[#141b29] rounded-full overflow-hidden border border-[#222e44]">
+              <div
+                className="h-full bg-blue-500 transition-all duration-300 rounded-full"
+                style={{ width: `${starProgressPercent}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom Right Telemetry Badges */}
+      {isPlaying && !isPaused && (
+        <div className="absolute bottom-6 right-8 pointer-events-none flex flex-col items-end gap-1.5 z-20 text-right">
+          <span className="text-[10px] font-mono text-slate-400 tracking-wider">
+            QUICK RESTART <strong className="text-white bg-[#1b2336] px-1.5 py-0.5 rounded border border-[#2b3956]">Y</strong>
+          </span>
+          <div className="flex items-center gap-2 text-xs font-mono font-bold text-blue-400">
+            <span>PISTOL</span>
+            <span className="text-base text-white">∞</span>
+          </div>
+        </div>
+      )}
+
+      {/* Pre-Drill Start Overlay */}
+      {!isPlaying && !showResultModal && (
+        <div
+          onClick={startDrill}
+          className="absolute inset-0 bg-[#070a12]/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center cursor-pointer z-30"
+        >
+          <div className="w-14 h-14 rounded-2xl bg-blue-500/15 border border-blue-500/40 flex items-center justify-center mb-4">
+            <Play className="w-6 h-6 text-blue-400 ml-0.5" />
+          </div>
+          <h3 className="text-2xl font-black text-white mb-1.5 tracking-wide uppercase">
+            STOPPING POWER (15 TARGETS)
+          </h3>
+          <p className="text-xs text-slate-400 max-w-sm mb-6 leading-relaxed">
+            Eliminate crosshair bounce and snap overshoot. Achieve crisp deceleration stopping power for pixel-perfect headshots.
+          </p>
+          <button
+            onClick={startDrill}
+            className="px-8 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs tracking-widest uppercase transition-colors shadow-md flex items-center gap-2 cursor-pointer"
+          >
+            <Maximize2 className="w-4 h-4" />
+            <span>PLAY NOW (FULLSCREEN)</span>
           </button>
         </div>
-      </div>
+      )}
 
-      {/* 3D Viewport */}
-      <div
-        className={`relative overflow-hidden border border-[#222738] shadow-2xl bg-[#0a0c13] ${
-          isFullscreen ? 'flex-1 rounded-2xl w-full my-2' : 'rounded-3xl'
-        }`}
-      >
-        <canvas
-          ref={canvasRef}
-          onClick={!isPlaying ? startDrill : requestLock}
-          className={`w-full cursor-none block ${isFullscreen ? 'h-full' : 'h-[540px]'}`}
+      {/* In-Game Pause Menu matching Screenshot 3 */}
+      {isPaused && (
+        <PauseMenu
+          exerciseTitle="Chapter 1 - Exercise 2: Stopping Power"
+          onResume={resumeDrill}
+          onRestart={restartDrill}
+          onOpenSettings={onOpenSettings}
+          onExit={() => {
+            setIsPlaying(false);
+            setIsPaused(false);
+            if (onExitDrill) onExitDrill();
+          }}
         />
+      )}
 
-        <HUDCrosshair settings={settings} isTense={false} />
-
-        {/* Real-time Stop Bounce Warning Overlay */}
-        <div
-          ref={bounceNotificationRef}
-          className="absolute top-6 left-1/2 -translate-x-1/2 bg-[#ff4655] text-white px-5 py-2 rounded-xl text-xs font-black tracking-wider uppercase items-center gap-2 shadow-2xl shadow-[#ff4655]/60 pointer-events-none hidden"
-        >
-          <AlertTriangle className="w-4 h-4 text-white" />
-          <span>Stop-Bounce Detected: Ease forearm braking rather than slamming wrist!</span>
-        </div>
-
-        {/* Start Overlay */}
-        {!isPlaying && !showResultModal && (
-          <div
-            onClick={startDrill}
-            className="absolute inset-0 bg-black/75 backdrop-blur-[4px] flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-all hover:bg-black/65"
-          >
-            <div className="w-16 h-16 rounded-2xl bg-[#ff4655]/20 border border-[#ff4655]/50 flex items-center justify-center mb-4 shadow-xl shadow-[#ff4655]/30">
-              <Play className="w-8 h-8 text-[#ff4655] ml-1" />
-            </div>
-            <h3 className="text-2xl font-black text-white mb-2 tracking-wide uppercase">
-              START STOPPING POWER DRILL
-            </h3>
-            <p className="text-xs text-slate-300 max-w-md mb-6 leading-relaxed">
-              15 wide-angle targets in 3D tactical space. Flick fast, but focus on the stop phase:
-              ease into the head without rebounding or oscillating backward.
-            </p>
-            <div className="flex items-center gap-3">
-              <div className="px-6 py-3 rounded-xl bg-[#ff4655] hover:bg-[#ff5a68] text-white text-xs font-bold tracking-wider uppercase shadow-xl shadow-[#ff4655]/35 transition-all">
-                Begin 3D Flick Drill (15 Targets)
-              </div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleFullscreen();
-                  startDrill();
-                }}
-                className="px-5 py-3 rounded-xl bg-[#1b2234] hover:bg-[#252f48] border border-[#2d3a56] text-white text-xs font-bold tracking-wider uppercase transition-all flex items-center gap-2"
-              >
-                <Maximize2 className="w-4 h-4 text-[#00f5d4]" />
-                <span>Fullscreen Focus</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Unlocked Resume Notice */}
-        {isPlaying && !isLocked && !showResultModal && (
-          <div
-            onClick={requestLock}
-            className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center p-6 text-center cursor-pointer"
-          >
-            <div className="w-12 h-12 rounded-xl bg-[#00f5d4]/20 border border-[#00f5d4]/40 flex items-center justify-center mb-3">
-              <Crosshair className="w-6 h-6 text-[#00f5d4]" />
-            </div>
-            <h4 className="text-lg font-bold text-white mb-1">Click to Resume Aim Lock</h4>
-            <p className="text-xs text-slate-400">Cursor was unlocked. Click anywhere to re-lock.</p>
-          </div>
-        )}
-      </div>
-
+      {/* Result Modal */}
       <ResultModal
         isOpen={showResultModal}
         result={lastResult}
         onPlayAgain={startDrill}
         onOpenSettings={onOpenSettings}
-        onClose={() => setShowResultModal(false)}
+        onClose={() => {
+          setShowResultModal(false);
+          if (onExitDrill) onExitDrill();
+        }}
       />
-
-      {!isFullscreen && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-[#121520] border border-[#23293c] rounded-2xl p-4 flex gap-3 shadow-lg">
-            <div className="w-8 h-8 rounded-xl bg-[#00f5d4]/10 text-[#00f5d4] flex items-center justify-center shrink-0">
-              <Zap className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-white mb-0.5">Critical Deceleration</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Most missed duels occur because the hand oscillates past the target and has to correct back.
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-[#121520] border border-[#23293c] rounded-2xl p-4 flex gap-3 shadow-lg">
-            <div className="w-8 h-8 rounded-xl bg-[#ff4655]/10 text-[#ff4655] flex items-center justify-center shrink-0">
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-white mb-0.5">Pad Friction Braking</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Allow the mousepad surface resistance to slow your glide instead of rigidly clenching tendons.
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-[#121520] border border-[#23293c] rounded-2xl p-4 flex gap-3 shadow-lg">
-            <div className="w-8 h-8 rounded-xl bg-[#ffb703]/10 text-[#ffb703] flex items-center justify-center shrink-0">
-              <RotateCcw className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-white mb-0.5">Target Confirmation</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Wait until the crosshair comes to a complete rest on the head hitbox before firing.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

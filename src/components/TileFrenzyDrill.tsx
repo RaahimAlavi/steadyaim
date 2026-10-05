@@ -62,13 +62,16 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
     };
   }, []);
 
+  const [hitmarkerActive, setHitmarkerActive] = useState(false);
+  const hasEngagedLockRef = useRef(false);
+
   // Fullscreen listener
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(Boolean(document.fullscreenElement));
       setTimeout(() => {
         fpsEngineRef.current?.resize();
-      }, 50);
+      }, 60);
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -86,18 +89,23 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
       const locked = document.pointerLockElement === canvasRef.current;
       setIsLocked(locked);
 
-      // If user unlocks during game without our pause menu open, show pause menu
-      if (!locked && isPlaying && !showResultModal) {
-        setIsPaused(true);
-        if (timerIntervalRef.current) {
-          clearInterval(timerIntervalRef.current);
-          timerIntervalRef.current = null;
+      if (locked) {
+        hasEngagedLockRef.current = true;
+      } else {
+        // Only trigger pause if pointer lock was actively engaged during this round
+        if (hasEngagedLockRef.current && isPlaying && !showResultModal && !isPaused) {
+          setIsPaused(true);
+          if (timerIntervalRef.current) {
+            clearInterval(timerIntervalRef.current);
+            timerIntervalRef.current = null;
+          }
         }
+        hasEngagedLockRef.current = false;
       }
     };
     document.addEventListener('pointerlockchange', handleLockChange);
     return () => document.removeEventListener('pointerlockchange', handleLockChange);
-  }, [isPlaying, showResultModal]);
+  }, [isPlaying, showResultModal, isPaused]);
 
   // Keyboard shortcut listener for Pause (Escape / Tab) and Quick Restart (Y)
   useEffect(() => {
@@ -117,13 +125,24 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isPlaying, isPaused]);
 
-  // Spawn random sphere targets in 3D firing range
+  // Spawn non-overlapping random sphere targets centered at eye-level on back wall (z = -8.6m)
   const spawnRandomTile = useCallback(() => {
     if (!fpsEngineRef.current) return;
-    const x = (Math.random() - 0.5) * 8.5;
-    const y = 1.0 + Math.random() * 1.35;
-    const z = -14 - Math.random() * 3.5;
-    fpsEngineRef.current.spawnTile(x, y, z);
+    const active = fpsEngineRef.current.getActiveTargets();
+    let x = 0;
+    let y = 1.65;
+    let attempts = 0;
+
+    do {
+      x = (Math.random() - 0.5) * 5.6;
+      y = 1.3 + Math.random() * 0.9; // Centered around 1.65m eye level
+      attempts++;
+    } while (
+      attempts < 20 &&
+      active.some((t) => Math.hypot(t.worldPosition.x - x, t.worldPosition.y - y) < 1.75)
+    );
+
+    fpsEngineRef.current.spawnTile(x, y, -8.6);
   }, []);
 
   // Keep 3 active targets on screen
@@ -218,6 +237,7 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
     setHitsCount(0);
     setMissesCount(0);
     setTenseFlagsCount(0);
+    hasEngagedLockRef.current = false;
     shotDetailsRef.current = [];
     lastHitTimeRef.current = performance.now();
 
@@ -225,14 +245,23 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
 
     // Auto-enter fullscreen as requested
     if (containerRef.current && !document.fullscreenElement) {
-      containerRef.current.requestFullscreen().catch(() => {});
+      containerRef.current
+        .requestFullscreen()
+        .then(() => {
+          setTimeout(() => {
+            canvasRef.current?.requestPointerLock();
+          }, 80);
+        })
+        .catch(() => {
+          canvasRef.current?.requestPointerLock();
+        });
+    } else {
+      canvasRef.current?.requestPointerLock();
     }
-
-    requestLock();
 
     setTimeout(() => {
       maintainThreeTiles();
-    }, 150);
+    }, 120);
 
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     timerIntervalRef.current = window.setInterval(() => {
@@ -259,7 +288,11 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
 
   const resumeDrill = () => {
     setIsPaused(false);
-    requestLock();
+    hasEngagedLockRef.current = false;
+    setTimeout(() => {
+      canvasRef.current?.requestPointerLock();
+    }, 50);
+
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     timerIntervalRef.current = window.setInterval(() => {
       setTimeLeft((prev) => {
@@ -274,6 +307,10 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
 
   const restartDrill = () => {
     setIsPaused(false);
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
     startDrill();
   };
 
@@ -305,6 +342,8 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
     if (isHit) {
       setHitsCount((prev) => prev + 1);
       setScore((s) => s + 100);
+      setHitmarkerActive(true);
+      setTimeout(() => setHitmarkerActive(false), 90);
 
       shotDetailsRef.current.push({
         shotNumber: hitsCount + 1,
@@ -379,12 +418,21 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
         className="w-full h-full cursor-none block absolute inset-0 z-0"
       />
 
-      {/* Minimal Green/Cyan Crosshair '+' matching Screenshot 2 */}
+      {/* Minimal Green/Cyan Crosshair '+' with Hitmarker Feedback */}
       {isPlaying && !isPaused && (
         <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
-          <div className="relative w-4 h-4 flex items-center justify-center">
+          <div className="relative w-8 h-8 flex items-center justify-center">
+            {/* Center '+' Crosshair */}
             <div className="absolute w-[12px] h-[1.75px] bg-[#00f5d4] shadow-sm" />
             <div className="absolute h-[12px] w-[1.75px] bg-[#00f5d4] shadow-sm" />
+
+            {/* Hitmarker Flash Feedback on confirmed hit */}
+            {hitmarkerActive && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="absolute w-3.5 h-[1.5px] bg-amber-400 rotate-45" />
+                <div className="absolute w-3.5 h-[1.5px] bg-amber-400 -rotate-45" />
+              </div>
+            )}
           </div>
         </div>
       )}

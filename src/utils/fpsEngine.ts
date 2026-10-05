@@ -44,8 +44,7 @@ export class FPSEngine {
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x07090e);
-    this.scene.fog = new THREE.FogExp2(0x07090e, 0.022);
+    this.scene.background = new THREE.Color(0x181e2b);
 
     // Initial camera with Valorant horizontal FOV (103 deg)
     const aspect = canvas.clientWidth / canvas.clientHeight || 16 / 9;
@@ -95,101 +94,152 @@ export class FPSEngine {
   }
 
   /**
-   * Builds high-tech esports tactical shooting range environment (3D Aim Trainer style)
+   * Builds high-tech esports tactical shooting range environment (matching 3D Aim Trainer benchmark)
    */
   private buildTacticalRange() {
-    // Ambient tactical light
-    const ambientLight = new THREE.AmbientLight(0x181f2f, 1.9);
+    // 1. Clean Industrial Shooting Bay Lighting
+    const ambientLight = new THREE.AmbientLight(0x384560, 2.6);
     this.scene.add(ambientLight);
 
-    // Overhead stadium key lights
-    const keyLight = new THREE.DirectionalLight(0xdde5ff, 2.4);
-    keyLight.position.set(4, 14, 6);
+    // Overhead stadium key downlight
+    const keyLight = new THREE.DirectionalLight(0xf1f5f9, 3.2);
+    keyLight.position.set(0, 8.0, -2);
     this.scene.add(keyLight);
 
-    // Radiant Cyan left fill light
-    const cyanLight = new THREE.PointLight(0x00f5d4, 3.5, 30);
-    cyanLight.position.set(-8, 4, -12);
-    this.scene.add(cyanLight);
+    // Dedicated Firing Wall Key Illuminator
+    const wallLight = new THREE.DirectionalLight(0xdbeafe, 2.6);
+    wallLight.position.set(0, 4.0, 4);
+    this.scene.add(wallLight);
 
-    // VCT Red right fill light
-    const redLight = new THREE.PointLight(0xff4655, 3.5, 30);
-    redLight.position.set(8, 4, -12);
-    this.scene.add(redLight);
-
-    // Checkered cybernetic ground plane
-    const floorGeo = new THREE.PlaneGeometry(80, 80, 40, 40);
+    // 2. Industrial Modular Floor (y = 0, z from 0 to -10m)
+    const floorGeo = new THREE.PlaneGeometry(36, 22);
     const floorMat = new THREE.MeshStandardMaterial({
-      color: 0x0a0d15,
+      color: 0x161d2a,
       roughness: 0.65,
       metalness: 0.35,
     });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
-    floor.position.y = 0;
+    floor.position.set(0, 0, -5);
     this.scene.add(floor);
 
-    // Neon floor grid
-    const gridHelper = new THREE.GridHelper(80, 40, 0xff4655, 0x182033);
-    gridHelper.position.y = 0.01;
+    // Floor tactical grid seams
+    const gridHelper = new THREE.GridHelper(36, 36, 0x242f45, 0x1b2334);
+    gridHelper.position.set(0, 0.01, -5);
     this.scene.add(gridHelper);
 
-    // Concentric distance arc rings on ground (5m, 10m, 15m, 20m)
-    [5, 10, 15, 20].forEach((dist) => {
-      const ringGeo = new THREE.RingGeometry(dist - 0.06, dist + 0.06, 64, 1, 0, Math.PI);
-      const ringMat = new THREE.MeshBasicMaterial({
-        color: dist === 10 ? 0x00f5d4 : 0x222c42,
-        side: THREE.DoubleSide,
-      });
-      const ring = new THREE.Mesh(ringGeo, ringMat);
-      ring.rotation.x = -Math.PI / 2;
-      ring.position.set(0, 0.02, 0);
-      this.scene.add(ring);
-    });
-
-    // Back Arena Firing Wall
-    const wallGeo = new THREE.PlaneGeometry(60, 14);
+    // 3. Back Firing Wall (Tactical Steel Panels at z = -10.0m, height 14m spanning y = -2m to 12m)
+    const wallGeo = new THREE.PlaneGeometry(36, 14.0);
     const wallMat = new THREE.MeshStandardMaterial({
-      color: 0x0e121d,
-      roughness: 0.85,
-      metalness: 0.2,
+      color: 0x283347,
+      roughness: 0.7,
+      metalness: 0.32,
     });
-    const wall = new THREE.Mesh(wallGeo, wallMat);
-    wall.position.set(0, 7, -24);
-    this.scene.add(wall);
+    const backWall = new THREE.Mesh(wallGeo, wallMat);
+    backWall.position.set(0, 5.0, -10.0);
+    this.scene.add(backWall);
 
-    // Head-level reference beam (Valorant standing eye height ~1.65m)
-    const beamGeo = new THREE.BoxGeometry(50, 0.05, 0.05);
-    const beamMat = new THREE.MeshBasicMaterial({ color: 0x00f5d4 });
-    const beam = new THREE.Mesh(beamGeo, beamMat);
-    beam.position.set(0, 1.65, -23.9);
-    this.scene.add(beam);
-
-    // Arena neon framing borders
-    const topBorderGeo = new THREE.BoxGeometry(50, 0.1, 0.1);
-    const topBorderMat = new THREE.MeshBasicMaterial({ color: 0xff4655 });
-    const topBorder = new THREE.Mesh(topBorderGeo, topBorderMat);
-    topBorder.position.set(0, 13.5, -23.9);
-    this.scene.add(topBorder);
-
-    // Tactical side pillars with neon accent strips
-    [-15, 15].forEach((x) => {
-      const pillarGeo = new THREE.BoxGeometry(2, 14, 2);
-      const pillarMat = new THREE.MeshStandardMaterial({
-        color: 0x141a29,
-        roughness: 0.5,
-        metalness: 0.4,
+    // Vertical structural columns on back wall
+    [-12, -8, -4, 0, 4, 8, 12].forEach((x) => {
+      const seamGeo = new THREE.BoxGeometry(0.22, 14.0, 0.08);
+      const seamMat = new THREE.MeshStandardMaterial({
+        color: 0x3d4d6a,
+        roughness: 0.55,
+        metalness: 0.5,
       });
-      const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-      pillar.position.set(x, 7, -23);
-      this.scene.add(pillar);
+      const seam = new THREE.Mesh(seamGeo, seamMat);
+      seam.position.set(x, 5.0, -9.95);
+      this.scene.add(seam);
+    });
 
-      // Neon vertical strip
-      const stripGeo = new THREE.BoxGeometry(0.08, 13.8, 0.08);
-      const stripMat = new THREE.MeshBasicMaterial({ color: 0x00f5d4 });
-      const strip = new THREE.Mesh(stripGeo, stripMat);
-      strip.position.set(x > 0 ? x - 1.05 : x + 1.05, 7, -21.9);
-      this.scene.add(strip);
+    // Horizontal architectural rails across back wall
+    [3.6, 6.8].forEach((y) => {
+      const railGeo = new THREE.BoxGeometry(36, 0.18, 0.1);
+      const railMat = new THREE.MeshStandardMaterial({
+        color: 0x3d4d6a,
+        roughness: 0.55,
+        metalness: 0.5,
+      });
+      const rail = new THREE.Mesh(railGeo, railMat);
+      rail.position.set(0, y, -9.94);
+      this.scene.add(rail);
+    });
+
+    // Industrial overhead ventilation pipe
+    const pipeGeo = new THREE.CylinderGeometry(0.28, 0.28, 36, 24);
+    const pipeMat = new THREE.MeshStandardMaterial({
+      color: 0x3b4a64,
+      roughness: 0.45,
+      metalness: 0.65,
+    });
+    const pipe = new THREE.Mesh(pipeGeo, pipeMat);
+    pipe.rotation.z = Math.PI / 2;
+    pipe.position.set(0, 8.0, -9.6);
+    this.scene.add(pipe);
+
+    // 4. Industrial Overhead Catwalk & Roof Girders
+    const ceilingGeo = new THREE.PlaneGeometry(36, 22);
+    const ceilingMat = new THREE.MeshStandardMaterial({
+      color: 0x1b2332,
+      roughness: 0.75,
+      side: THREE.DoubleSide,
+    });
+    const ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
+    ceiling.rotation.x = Math.PI / 2;
+    ceiling.position.set(0, 8.5, -5);
+    this.scene.add(ceiling);
+
+    // Industrial roof trusses / steel girders spanning across the bay
+    [-10, -5, 0, 5, 10].forEach((x) => {
+      const girderGeo = new THREE.BoxGeometry(0.24, 0.45, 16);
+      const girderMat = new THREE.MeshStandardMaterial({
+        color: 0x2d3a50,
+        roughness: 0.5,
+        metalness: 0.6,
+      });
+      const girder = new THREE.Mesh(girderGeo, girderMat);
+      girder.position.set(x, 8.2, -4);
+      this.scene.add(girder);
+    });
+
+    // Top Catwalk Warning Accent Rail matching 3D Aim Trainer reference
+    const catwalkGeo = new THREE.BoxGeometry(36, 0.08, 0.08);
+    const catwalkMat = new THREE.MeshBasicMaterial({ color: 0xff4655 });
+    const catwalk = new THREE.Mesh(catwalkGeo, catwalkMat);
+    catwalk.position.set(0, 8.4, -8.7);
+    this.scene.add(catwalk);
+
+    // 5. Side Enclosure Walls
+    const sideWallGeo = new THREE.PlaneGeometry(22, 14.0);
+    const sideWallMat = new THREE.MeshStandardMaterial({
+      color: 0x1f2738,
+      roughness: 0.8,
+    });
+
+    const leftWall = new THREE.Mesh(sideWallGeo, sideWallMat);
+    leftWall.rotation.y = Math.PI / 2;
+    leftWall.position.set(-16, 5.0, -5);
+    this.scene.add(leftWall);
+
+    const rightWall = new THREE.Mesh(sideWallGeo, sideWallMat);
+    rightWall.rotation.y = -Math.PI / 2;
+    rightWall.position.set(16, 5.0, -5);
+    this.scene.add(rightWall);
+
+    // Baseboard Floor Trim
+    const baseboardGeo = new THREE.BoxGeometry(36, 0.2, 0.2);
+    const baseboardMat = new THREE.MeshStandardMaterial({ color: 0x2b374c });
+    const baseboard = new THREE.Mesh(baseboardGeo, baseboardMat);
+    baseboard.position.set(0, 0.1, -8.92);
+    this.scene.add(baseboard);
+
+    // Subtle side runner floor accent lights
+    [-15.9, 15.9].forEach((x) => {
+      const runnerGeo = new THREE.BoxGeometry(0.08, 0.04, 18);
+      const runnerMat = new THREE.MeshBasicMaterial({ color: 0xf97316 });
+      const runner = new THREE.Mesh(runnerGeo, runnerMat);
+      runner.position.set(x, 0.02, -5);
+      this.scene.add(runner);
     });
   }
 
@@ -228,90 +278,89 @@ export class FPSEngine {
   }
 
   /**
-   * Spawns a 3D tactical target bot firmly anchored to the floor plane (y = 0)
+   * Creates an authentic esports Cobalt Blue sphere target with high-precision center bullseye
+   */
+  public createCobaltTargetMesh(): { group: THREE.Group; headMesh: THREE.Mesh } {
+    const group = new THREE.Group();
+
+    // 1. Cobalt Blue Shaded Sphere
+    const sphereGeo = new THREE.SphereGeometry(0.48, 32, 32);
+    const sphereMat = new THREE.MeshStandardMaterial({
+      color: 0x1d4ed8,
+      emissive: 0x1e3a8a,
+      emissiveIntensity: 0.35,
+      roughness: 0.25,
+      metalness: 0.5,
+    });
+    const sphereMesh = new THREE.Mesh(sphereGeo, sphereMat);
+    sphereMesh.name = 'head';
+    group.add(sphereMesh);
+
+    // 2. Subtle Precision Latitude/Longitude Wireframe
+    const wireGeo = new THREE.WireframeGeometry(new THREE.SphereGeometry(0.483, 16, 16));
+    const wireMat = new THREE.LineBasicMaterial({
+      color: 0x93c5fd,
+      transparent: true,
+      opacity: 0.22,
+    });
+    const wireMesh = new THREE.LineSegments(wireGeo, wireMat);
+    group.add(wireMesh);
+
+    // 3. Crisp Flat Bullseye Center Facing Player (Clean and pristine, no pimples)
+    const bullseyeGroup = new THREE.Group();
+
+    // Outer Orange Bullseye Ring
+    const outerGeo = new THREE.CircleGeometry(0.088, 32);
+    const outerMat = new THREE.MeshBasicMaterial({
+      color: 0xf97316,
+      side: THREE.DoubleSide,
+    });
+    const outerDot = new THREE.Mesh(outerGeo, outerMat);
+    bullseyeGroup.add(outerDot);
+
+    // Inner White Pinpoint Dot for surgical center aiming
+    const innerGeo = new THREE.CircleGeometry(0.028, 24);
+    const innerMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      side: THREE.DoubleSide,
+    });
+    const innerDot = new THREE.Mesh(innerGeo, innerMat);
+    innerDot.position.z = 0.002;
+    bullseyeGroup.add(innerDot);
+
+    bullseyeGroup.position.set(0, 0, 0.485);
+    group.add(bullseyeGroup);
+
+    return { group, headMesh: sphereMesh };
+  }
+
+  /**
+   * Spawns a target for single-target drills (Whisper Grip, Stopping Power)
    */
   public spawnTarget(
     offsetAngleYaw: number,
     verticalOffsetMeters: number = 0,
-    distance: number = 12,
+    distance: number = 9.6,
     type: 'micro' | 'flick' | 'tile' = 'micro'
   ): Target3D {
-    // Remove existing single target
     this.clearTargets();
 
-    const group = new THREE.Group();
-    const headHeight = Math.max(1.52, Math.min(1.78, 1.65 + verticalOffsetMeters));
+    const { group, headMesh } = this.createCobaltTargetMesh();
 
-    // Base Pedestal at y = 0
-    const baseGeo = new THREE.CylinderGeometry(0.38, 0.44, 0.1, 24);
-    const baseMat = new THREE.MeshStandardMaterial({
-      color: 0x161c28,
-      roughness: 0.8,
-      metalness: 0.3,
-    });
-    const baseMesh = new THREE.Mesh(baseGeo, baseMat);
-    baseMesh.position.y = 0.05;
-    group.add(baseMesh);
-
-    // Stem Pole
-    const poleGeo = new THREE.CylinderGeometry(0.07, 0.07, 0.72, 16);
-    const poleMat = new THREE.MeshStandardMaterial({
-      color: 0x242d40,
-      roughness: 0.5,
-      metalness: 0.6,
-    });
-    const poleMesh = new THREE.Mesh(poleGeo, poleMat);
-    poleMesh.position.y = 0.46;
-    group.add(poleMesh);
-
-    // Tactical Torso
-    const torsoGeo = new THREE.CylinderGeometry(0.23, 0.29, 0.62, 16);
-    const torsoMat = new THREE.MeshStandardMaterial({
-      color: 0x192132,
-      roughness: 0.7,
-      metalness: 0.4,
-    });
-    const torsoMesh = new THREE.Mesh(torsoGeo, torsoMat);
-    torsoMesh.position.y = 1.05;
-    group.add(torsoMesh);
-
-    // Head Hitbox
-    const headRadius = type === 'micro' ? 0.21 : 0.24;
-    const headGeo = new THREE.SphereGeometry(headRadius, 24, 24);
-    const headMat = new THREE.MeshStandardMaterial({
-      color: 0xff4655,
-      emissive: 0xff4655,
-      emissiveIntensity: 0.45,
-      roughness: 0.25,
-      metalness: 0.6,
-    });
-    const headMesh = new THREE.Mesh(headGeo, headMat);
-    headMesh.name = 'head';
-    headMesh.position.y = headHeight;
-    group.add(headMesh);
-
-    // Rotating Energy Ring around Head
-    const ringGeo = new THREE.TorusGeometry(headRadius * 1.35, 0.02, 16, 32);
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0x00f5d4 });
-    const ring = new THREE.Mesh(ringGeo, ringMat);
-    ring.name = 'ring';
-    ring.position.y = headHeight;
-    group.add(ring);
-
-    // Position bot anchored to ground at y = 0
     const targetYaw = this.yaw + offsetAngleYaw;
     const x = -Math.sin(targetYaw) * distance;
     const z = -Math.cos(targetYaw) * distance;
+    const y = Math.max(1.2, Math.min(2.4, 1.65 + verticalOffsetMeters));
 
-    group.position.set(x, 0, z);
-    group.lookAt(new THREE.Vector3(this.camera.position.x, 0, this.camera.position.z));
+    group.position.set(x, y, z);
+    group.lookAt(this.camera.position);
     this.scene.add(group);
 
     const targetObj: Target3D = {
       id: `target-${Date.now()}-${Math.random()}`,
       mesh: group,
       headMesh,
-      worldPosition: new THREE.Vector3(x, headHeight, z),
+      worldPosition: new THREE.Vector3(x, y, z),
       spawnTime: performance.now(),
       isHit: false,
       type,
@@ -322,43 +371,10 @@ export class FPSEngine {
   }
 
   /**
-   * Spawns a cobalt blue sphere target with orange core dots (matching 3D Aim Trainer benchmark)
+   * Spawns a cobalt blue sphere target with orange core bullseye (matching 3D Aim Trainer benchmark)
    */
-  public spawnTile(xPos: number, yPos: number, zPos: number = -15): Target3D {
-    const group = new THREE.Group();
-
-    // 1. Cobalt Blue Shaded Sphere
-    const sphereGeo = new THREE.SphereGeometry(0.38, 24, 24);
-    const sphereMat = new THREE.MeshStandardMaterial({
-      color: 0x1d4ed8,
-      emissive: 0x1e3a8a,
-      emissiveIntensity: 0.65,
-      roughness: 0.3,
-      metalness: 0.6,
-    });
-    const sphereMesh = new THREE.Mesh(sphereGeo, sphereMat);
-    sphereMesh.name = 'head';
-    group.add(sphereMesh);
-
-    // 2. Subtle Geometric Latitude/Longitude Wireframe
-    const wireGeo = new THREE.WireframeGeometry(new THREE.SphereGeometry(0.382, 16, 16));
-    const wireMat = new THREE.LineBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0.35 });
-    const wireMesh = new THREE.LineSegments(wireGeo, wireMat);
-    group.add(wireMesh);
-
-    // 3. Bright Orange Core & Equatorial Target Dots (matching screenshot)
-    const dotGeo = new THREE.SphereGeometry(0.065, 12, 12);
-    const dotMat = new THREE.MeshBasicMaterial({ color: 0xfb923c });
-
-    const centerDot = new THREE.Mesh(dotGeo, dotMat);
-    centerDot.position.set(0, 0, 0.35);
-    group.add(centerDot);
-
-    [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2].forEach((ang) => {
-      const d = new THREE.Mesh(dotGeo, dotMat);
-      d.position.set(Math.cos(ang) * 0.35, Math.sin(ang) * 0.35, 0.08);
-      group.add(d);
-    });
+  public spawnTile(xPos: number, yPos: number, zPos: number = -9.6): Target3D {
+    const { group, headMesh } = this.createCobaltTargetMesh();
 
     group.position.set(xPos, yPos, zPos);
     group.lookAt(this.camera.position);
@@ -367,7 +383,7 @@ export class FPSEngine {
     const targetObj: Target3D = {
       id: `tile-${Date.now()}-${Math.random()}`,
       mesh: group,
-      headMesh: sphereMesh,
+      headMesh,
       worldPosition: new THREE.Vector3(xPos, yPos, zPos),
       spawnTime: performance.now(),
       isHit: false,
@@ -425,20 +441,22 @@ export class FPSEngine {
   }
 
   /**
-   * Spawns neon shatter particles on hit
+   * Spawns crisp cobalt blue and orange shatter sparks on target break
    */
   private spawnShatterParticles(pos: THREE.Vector3) {
-    const pGeo = new THREE.BoxGeometry(0.06, 0.06, 0.06);
-    const pMat = new THREE.MeshBasicMaterial({ color: 0x00f5d4 });
+    const pGeo = new THREE.BoxGeometry(0.065, 0.065, 0.065);
+    const blueMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6 });
+    const orangeMat = new THREE.MeshBasicMaterial({ color: 0xf97316 });
 
-    for (let i = 0; i < 22; i++) {
-      const pMesh = new THREE.Mesh(pGeo, pMat);
+    for (let i = 0; i < 24; i++) {
+      const mat = i % 3 === 0 ? orangeMat : blueMat;
+      const pMesh = new THREE.Mesh(pGeo, mat);
       pMesh.position.copy(pos);
 
       const vel = new THREE.Vector3(
-        (Math.random() - 0.5) * 7,
-        Math.random() * 6 + 1.5,
-        (Math.random() - 0.5) * 7
+        (Math.random() - 0.5) * 8,
+        (Math.random() - 0.5) * 6 + 1.2,
+        (Math.random() - 0.5) * 8
       );
 
       this.scene.add(pMesh);
@@ -446,7 +464,7 @@ export class FPSEngine {
         mesh: pMesh,
         velocity: vel,
         life: 0,
-        maxLife: 380 + Math.random() * 220, // ms
+        maxLife: 260 + Math.random() * 180, // ms
       });
     }
   }
@@ -466,6 +484,10 @@ export class FPSEngine {
 
   public getActiveTargetsCount(): number {
     return this.targets.length;
+  }
+
+  public getActiveTargets(): Target3D[] {
+    return this.targets;
   }
 
   private startLoop() {

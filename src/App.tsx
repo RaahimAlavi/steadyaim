@@ -159,7 +159,7 @@ export function App() {
                 <TileFrenzyDrill
                   settings={settings}
                   onOpenSettings={() => setIsSettingsOpen(true)}
-                  onExitDrill={() => setActiveTab('hub')}
+                  onExitDrill={() => setActiveTab('radiant')}
                 />
               </div>
             )}
@@ -169,6 +169,7 @@ export function App() {
                 <WhisperGripDrill
                   settings={settings}
                   onOpenSettings={() => setIsSettingsOpen(true)}
+                  onExitDrill={() => setActiveTab('radiant')}
                 />
               </div>
             )}
@@ -178,6 +179,7 @@ export function App() {
                 <StoppingPowerDrill
                   settings={settings}
                   onOpenSettings={() => setIsSettingsOpen(true)}
+                  onExitDrill={() => setActiveTab('radiant')}
                 />
               </div>
             )}
