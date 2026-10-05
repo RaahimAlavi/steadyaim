@@ -2,24 +2,40 @@ import React from 'react';
 import type { UserSettings } from '../types';
 import { calculateEDPI, calculateCm360 } from '../utils/aimMath';
 import {
-  Activity,
-  Target,
-  ShieldAlert,
+  Sparkles,
+  Gamepad2,
+  Flame,
   Sliders,
   Volume2,
   VolumeX,
-  MousePointer2,
+  Maximize,
+  Minimize,
+  Menu,
   Video,
-  Zap,
-  LayoutGrid,
+  Home,
 } from 'lucide-react';
+import { audioEngine } from '../utils/audioEngine';
+
+export type AppTab =
+  | 'hero'
+  | 'radiant'
+  | 'hub'
+  | 'tile-frenzy'
+  | 'whisper'
+  | 'stopping'
+  | 'analytics'
+  | 'clip-analyzer'
+  | 'calibrator';
 
 interface NavbarProps {
   settings: UserSettings;
-  activeTab: 'hub' | 'diagnostics' | 'whisper-grip' | 'stopping-power' | 'tile-frenzy' | 'clip-analyzer' | 'benchmark';
-  setActiveTab: (tab: 'hub' | 'diagnostics' | 'whisper-grip' | 'stopping-power' | 'tile-frenzy' | 'clip-analyzer' | 'benchmark') => void;
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
   openSettings: () => void;
   toggleSound: () => void;
+  toggleSidebar: () => void;
+  isFullscreen: boolean;
+  toggleFullscreen: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -28,143 +44,158 @@ export const Navbar: React.FC<NavbarProps> = ({
   setActiveTab,
   openSettings,
   toggleSound,
+  toggleSidebar,
+  isFullscreen,
+  toggleFullscreen,
 }) => {
   const edpi = calculateEDPI(settings.dpi, settings.sensitivity);
   const cm360 = calculateCm360(settings.dpi, settings.sensitivity);
 
+  const handleTabClick = (tab: AppTab) => {
+    audioEngine.playClick();
+    setActiveTab(tab);
+  };
+
   return (
-    <header className="w-full bg-[#090c14] border-b border-[#1c2336] px-4 lg:px-8 py-2.5 sticky top-0 z-50 backdrop-blur-md">
-      <div className="max-w-[1440px] mx-auto flex flex-col xl:flex-row items-center justify-between gap-3">
-        {/* Brand */}
-        <div
-          onClick={() => setActiveTab('hub')}
-          className="flex items-center gap-3 cursor-pointer group"
-        >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#ff4655] to-[#ff7582] flex items-center justify-center shadow-lg shadow-[#ff4655]/30 group-hover:scale-105 transition-transform">
-            <MousePointer2 className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-black text-base tracking-wider text-white">STEADYAIM</span>
-              <span className="text-[9px] uppercase font-extrabold tracking-widest px-2 py-0.5 rounded-full bg-[#ff4655]/20 text-[#ff4655] border border-[#ff4655]/30 font-mono">
-                PRO
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400">Esports Tactical Aim & Gunfight Diagnostics</p>
-          </div>
+    <header className="w-full bg-[#080b12]/95 border-b border-[#182033] px-4 lg:px-6 py-2.5 sticky top-0 z-30 backdrop-blur-md">
+      <div className="w-full flex items-center justify-between gap-3">
+        {/* Left: Mobile Sidebar Toggle + Mode Navigation Pills */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              audioEngine.playClick();
+              toggleSidebar();
+            }}
+            className="lg:hidden p-2 rounded-xl bg-[#111624] border border-[#20283d] text-slate-300 hover:text-white transition-colors cursor-pointer"
+            title="Toggle Navigation Menu"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
+
+          {/* Quick Switcher Pills for Primary Modes */}
+          <nav className="hidden sm:flex items-center gap-1.5 p-1 rounded-xl bg-[#0f1422] border border-[#1e263d]">
+            <button
+              onClick={() => handleTabClick('hero')}
+              onMouseEnter={() => audioEngine.playHover()}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'hero'
+                  ? 'bg-gradient-to-r from-[#ea580c] to-[#f97316] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#161e31]'
+              }`}
+            >
+              <Home className="w-3.5 h-3.5" />
+              <span>Hero</span>
+            </button>
+
+            <button
+              onClick={() => handleTabClick('radiant')}
+              onMouseEnter={() => audioEngine.playHover()}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'radiant'
+                  ? 'bg-[#00f5d4] text-[#07090e] shadow-[0_0_12px_rgba(0,245,212,0.4)]'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#161e31]'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Path to Radiant</span>
+            </button>
+
+            <button
+              onClick={() => handleTabClick('hub')}
+              onMouseEnter={() => audioEngine.playHover()}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'hub'
+                  ? 'bg-[#1b253b] text-white border border-[#2e3e60]'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#161e31]'
+              }`}
+            >
+              <Gamepad2 className="w-3.5 h-3.5 text-slate-300" />
+              <span>Drill Hub</span>
+            </button>
+
+            <button
+              onClick={() => handleTabClick('tile-frenzy')}
+              onMouseEnter={() => audioEngine.playHover()}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'tile-frenzy'
+                  ? 'bg-[#ffb703] text-black font-extrabold shadow-[0_0_12px_rgba(255,183,3,0.4)]'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#161e31]'
+              }`}
+            >
+              <Flame className="w-3.5 h-3.5 text-[#ffb703]" />
+              <span>Tile Frenzy</span>
+            </button>
+
+            <button
+              onClick={() => handleTabClick('clip-analyzer')}
+              onMouseEnter={() => audioEngine.playHover()}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'clip-analyzer'
+                  ? 'bg-[#1b253b] text-[#00f5d4] border border-[#00f5d4]/40'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#161e31]'
+              }`}
+            >
+              <Video className="w-3.5 h-3.5 text-[#00f5d4]" />
+              <span>VOD Analyzer</span>
+            </button>
+          </nav>
         </div>
 
-        {/* Navigation Tabs (3D Aim Trainer style organized buttons) */}
-        <nav className="flex items-center bg-[#101422] p-1 rounded-2xl border border-[#20273c] shadow-inner gap-1 overflow-x-auto max-w-full">
-          <button
-            onClick={() => setActiveTab('hub')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === 'hub'
-                ? 'bg-[#ff4655] text-white shadow-lg shadow-[#ff4655]/30'
-                : 'text-slate-400 hover:text-white hover:bg-[#181f33]'
-            }`}
-          >
-            <LayoutGrid className="w-3.5 h-3.5" />
-            <span>Drill Hub</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('whisper-grip')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === 'whisper-grip'
-                ? 'bg-[#ff4655] text-white shadow-lg shadow-[#ff4655]/30'
-                : 'text-slate-400 hover:text-white hover:bg-[#181f33]'
-            }`}
-          >
-            <Target className="w-3.5 h-3.5" />
-            <span>Whisper Grip</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('stopping-power')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === 'stopping-power'
-                ? 'bg-[#ff4655] text-white shadow-lg shadow-[#ff4655]/30'
-                : 'text-slate-400 hover:text-white hover:bg-[#181f33]'
-            }`}
-          >
-            <ShieldAlert className="w-3.5 h-3.5" />
-            <span>Stopping Power</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('tile-frenzy')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === 'tile-frenzy'
-                ? 'bg-[#ff4655] text-white shadow-lg shadow-[#ff4655]/30'
-                : 'text-slate-400 hover:text-white hover:bg-[#181f33]'
-            }`}
-          >
-            <Zap className="w-3.5 h-3.5 text-[#ffb703]" />
-            <span>Tile Frenzy</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('clip-analyzer')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === 'clip-analyzer'
-                ? 'bg-[#ff4655] text-white shadow-lg shadow-[#ff4655]/30'
-                : 'text-slate-400 hover:text-white hover:bg-[#181f33]'
-            }`}
-          >
-            <Video className="w-3.5 h-3.5 text-[#00f5d4]" />
-            <span>VOD Analyzer</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('diagnostics')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === 'diagnostics'
-                ? 'bg-[#ff4655] text-white shadow-lg shadow-[#ff4655]/30'
-                : 'text-slate-400 hover:text-white hover:bg-[#181f33]'
-            }`}
-          >
-            <Activity className="w-3.5 h-3.5" />
-            <span>Tremor Lab</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('benchmark')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === 'benchmark'
-                ? 'bg-[#ff4655] text-white shadow-lg shadow-[#ff4655]/30'
-                : 'text-slate-400 hover:text-white hover:bg-[#181f33]'
-            }`}
-          >
-            <Sliders className="w-3.5 h-3.5" />
-            <span>Sens & Hardware</span>
-          </button>
-        </nav>
-
-        {/* Quick Info & Action Badges */}
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 bg-[#131622] border border-[#222738] rounded-lg px-3 py-1.5 text-xs">
-            <span className="text-slate-400">eDPI:</span>
-            <span className="font-bold text-[#00f5d4]">{edpi}</span>
-            <span className="text-slate-600">|</span>
-            <span className="text-slate-400">360°:</span>
-            <span className="font-mono text-slate-300">{cm360}cm</span>
+        {/* Right: Telemetry, Sound & Fullscreen Controls */}
+        <div className="flex items-center gap-2.5">
+          {/* Active Sensitivity Pill */}
+          <div className="hidden md:flex items-center gap-2 bg-[#0e1320] border border-[#1d263b] rounded-xl px-3 py-1.5 text-xs shadow-inner">
+            <span className="text-slate-400 font-mono text-[11px]">SENS</span>
+            <span className="font-bold text-[#00f5d4] font-mono">{settings.sensitivity}</span>
+            <span className="text-slate-600">·</span>
+            <span className="text-slate-400 font-mono text-[11px]">eDPI</span>
+            <span className="font-bold text-white font-mono">{edpi}</span>
+            <span className="text-slate-600">·</span>
+            <span className="font-mono text-slate-400 text-[11px]">{cm360}cm/360</span>
           </div>
 
+          {/* Sound Synthesizer Toggle */}
           <button
-            onClick={toggleSound}
-            title={settings.soundEnabled ? 'Mute Sounds' : 'Enable Sounds'}
-            className="p-2 rounded-lg bg-[#131622] border border-[#222738] text-slate-300 hover:text-white hover:bg-[#1b2030] transition-colors"
+            onClick={() => {
+              audioEngine.enabled = !audioEngine.enabled;
+              toggleSound();
+            }}
+            title={settings.soundEnabled ? 'Mute Tactical Sounds' : 'Enable Tactical Sounds'}
+            className="p-2 rounded-xl bg-[#0f1422] border border-[#1e263d] text-slate-300 hover:text-white hover:border-[#00f5d4]/40 transition-colors cursor-pointer"
           >
-            {settings.soundEnabled ? <Volume2 className="w-4 h-4 text-[#00f5d4]" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
+            {settings.soundEnabled ? (
+              <Volume2 className="w-4 h-4 text-[#00f5d4]" />
+            ) : (
+              <VolumeX className="w-4 h-4 text-slate-500" />
+            )}
           </button>
 
+          {/* Fullscreen Toggle */}
           <button
-            onClick={openSettings}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1a1f2e] border border-[#2a324b] text-xs font-medium text-slate-200 hover:text-white hover:border-[#ff4655]/50 transition-all"
+            onClick={() => {
+              audioEngine.playClick();
+              toggleFullscreen();
+            }}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen (F11)'}
+            className="p-2 rounded-xl bg-[#0f1422] border border-[#1e263d] text-slate-300 hover:text-white hover:border-[#00f5d4]/40 transition-colors cursor-pointer"
+          >
+            {isFullscreen ? (
+              <Minimize className="w-4 h-4 text-[#ffb703]" />
+            ) : (
+              <Maximize className="w-4 h-4 text-slate-300" />
+            )}
+          </button>
+
+          {/* Quick Settings Calibration Button */}
+          <button
+            onClick={() => {
+              audioEngine.playClick();
+              openSettings();
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#151c2e] border border-[#242f49] hover:border-[#ff4655]/60 text-xs font-bold text-slate-200 hover:text-white transition-all cursor-pointer shadow-sm"
           >
             <Sliders className="w-3.5 h-3.5 text-[#ff4655]" />
-            <span>{settings.dpi} DPI / {settings.sensitivity} Sens</span>
+            <span className="hidden sm:inline">{settings.dpi} DPI</span>
           </button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { VALORANT_M_YAW, VALORANT_HORIZONTAL_FOV } from './aimMath';
+import { audioEngine } from './audioEngine';
 
 export interface Target3D {
   id: string;
@@ -380,6 +381,7 @@ export class FPSEngine {
    */
   public checkHit(): { isHit: boolean; target: Target3D | null } {
     this.triggerMuzzleFlash();
+    audioEngine.playShot();
 
     if (this.targets.length === 0) {
       return { isHit: false, target: null };
@@ -393,6 +395,7 @@ export class FPSEngine {
       const intersects = this.raycaster.intersectObjects(t.mesh.children, true);
       if (intersects.length > 0) {
         t.isHit = true;
+        audioEngine.playHeadshot();
 
         // Spawn shatter particles
         this.spawnShatterParticles(t.worldPosition);
