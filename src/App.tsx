@@ -5,6 +5,7 @@ import { LiveDiagnostics } from './components/LiveDiagnostics';
 import { WhisperGripDrill } from './components/WhisperGripDrill';
 import { StoppingPowerDrill } from './components/StoppingPowerDrill';
 import { SensBenchmark } from './components/SensBenchmark';
+import { ClipAnalyzer } from './components/ClipAnalyzer';
 import { SettingsModal } from './components/SettingsModal';
 import { sounds } from './utils/soundEffects';
 import { Crosshair, Shield } from 'lucide-react';
@@ -34,7 +35,7 @@ export function App() {
     };
   });
 
-  const [activeTab, setActiveTab] = useState<'diagnostics' | 'whisper-grip' | 'stopping-power' | 'benchmark'>('whisper-grip');
+  const [activeTab, setActiveTab] = useState<'diagnostics' | 'whisper-grip' | 'stopping-power' | 'clip-analyzer' | 'benchmark'>('whisper-grip');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Sync sound setting
@@ -64,13 +65,14 @@ export function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8">
-        {activeTab === 'diagnostics' && <LiveDiagnostics settings={settings} />}
         {activeTab === 'whisper-grip' && (
           <WhisperGripDrill settings={settings} onOpenSettings={() => setIsSettingsOpen(true)} />
         )}
         {activeTab === 'stopping-power' && (
           <StoppingPowerDrill settings={settings} onOpenSettings={() => setIsSettingsOpen(true)} />
         )}
+        {activeTab === 'clip-analyzer' && <ClipAnalyzer />}
+        {activeTab === 'diagnostics' && <LiveDiagnostics settings={settings} />}
         {activeTab === 'benchmark' && (
           <SensBenchmark settings={settings} onUpdateSens={handleUpdateSens} />
         )}

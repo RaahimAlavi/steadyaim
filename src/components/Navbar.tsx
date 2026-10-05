@@ -2,12 +2,13 @@ import React from 'react';
 import type { UserSettings } from '../types';
 
 import { calculateEDPI, calculateCm360 } from '../utils/aimMath';
-import { Activity, Target, ShieldAlert, Sliders, Volume2, VolumeX, MousePointer2 } from 'lucide-react';
+import { Activity, Target, ShieldAlert, Sliders, Volume2, VolumeX, MousePointer2, Video } from 'lucide-react';
+
 
 interface NavbarProps {
   settings: UserSettings;
-  activeTab: 'diagnostics' | 'whisper-grip' | 'stopping-power' | 'benchmark';
-  setActiveTab: (tab: 'diagnostics' | 'whisper-grip' | 'stopping-power' | 'benchmark') => void;
+  activeTab: 'diagnostics' | 'whisper-grip' | 'stopping-power' | 'clip-analyzer' | 'benchmark';
+  setActiveTab: (tab: 'diagnostics' | 'whisper-grip' | 'stopping-power' | 'clip-analyzer' | 'benchmark') => void;
   openSettings: () => void;
   toggleSound: () => void;
 }
@@ -42,55 +43,68 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Navigation Tabs */}
-        <nav className="flex items-center bg-[#131622] p-1 rounded-xl border border-[#222738] shadow-inner">
-          <button
-            onClick={() => setActiveTab('diagnostics')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeTab === 'diagnostics'
-                ? 'bg-[#ff4655] text-white shadow-md shadow-[#ff4655]/30'
-                : 'text-slate-400 hover:text-white hover:bg-[#1c2132]'
-            }`}
-          >
-            <Activity className="w-3.5 h-3.5" />
-            <span>Diagnostics Lab</span>
-          </button>
-
+        <nav className="flex items-center bg-[#131622] p-1 rounded-xl border border-[#222738] shadow-inner flex-wrap justify-center gap-1">
           <button
             onClick={() => setActiveTab('whisper-grip')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               activeTab === 'whisper-grip'
                 ? 'bg-[#ff4655] text-white shadow-md shadow-[#ff4655]/30'
                 : 'text-slate-400 hover:text-white hover:bg-[#1c2132]'
             }`}
           >
             <Target className="w-3.5 h-3.5" />
-            <span>Whisper Grip Drill</span>
+            <span>3D Whisper Grip</span>
           </button>
 
           <button
             onClick={() => setActiveTab('stopping-power')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               activeTab === 'stopping-power'
                 ? 'bg-[#ff4655] text-white shadow-md shadow-[#ff4655]/30'
                 : 'text-slate-400 hover:text-white hover:bg-[#1c2132]'
             }`}
           >
             <ShieldAlert className="w-3.5 h-3.5" />
-            <span>Stopping Power</span>
+            <span>3D Stopping Power</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('clip-analyzer')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              activeTab === 'clip-analyzer'
+                ? 'bg-[#ff4655] text-white shadow-md shadow-[#ff4655]/30'
+                : 'text-slate-400 hover:text-white hover:bg-[#1c2132]'
+            }`}
+          >
+            <Video className="w-3.5 h-3.5 text-[#00f5d4]" />
+            <span>Gunfight Clip VOD</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('diagnostics')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              activeTab === 'diagnostics'
+                ? 'bg-[#ff4655] text-white shadow-md shadow-[#ff4655]/30'
+                : 'text-slate-400 hover:text-white hover:bg-[#1c2132]'
+            }`}
+          >
+            <Activity className="w-3.5 h-3.5" />
+            <span>Tremor Lab</span>
           </button>
 
           <button
             onClick={() => setActiveTab('benchmark')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               activeTab === 'benchmark'
                 ? 'bg-[#ff4655] text-white shadow-md shadow-[#ff4655]/30'
                 : 'text-slate-400 hover:text-white hover:bg-[#1c2132]'
             }`}
           >
             <Sliders className="w-3.5 h-3.5" />
-            <span>Sens & G402 Guide</span>
+            <span>G402 & Sens</span>
           </button>
         </nav>
+
 
         {/* Quick Info & Action Badges */}
         <div className="flex items-center gap-3">
