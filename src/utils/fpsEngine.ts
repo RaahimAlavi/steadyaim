@@ -62,6 +62,8 @@ export class FPSEngine {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     this.raycaster = new THREE.Raycaster();
+    this.raycaster.params.Line = { threshold: 0 };
+    this.raycaster.params.Points = { threshold: 0 };
     this.centerCoord = new THREE.Vector2(0, 0); // Exactly screen center
 
     // Muzzle flash light attached to camera
@@ -304,10 +306,12 @@ export class FPSEngine {
       opacity: 0.22,
     });
     const wireMesh = new THREE.LineSegments(wireGeo, wireMat);
+    wireMesh.raycast = () => {}; // Never participate in hit raycasting
     group.add(wireMesh);
 
     // 3. Crisp Flat Bullseye Center Facing Player (Clean and pristine, no pimples)
     const bullseyeGroup = new THREE.Group();
+    bullseyeGroup.raycast = () => {};
 
     // Outer Orange Bullseye Ring
     const outerGeo = new THREE.CircleGeometry(0.088, 32);
@@ -316,6 +320,7 @@ export class FPSEngine {
       side: THREE.DoubleSide,
     });
     const outerDot = new THREE.Mesh(outerGeo, outerMat);
+    outerDot.raycast = () => {};
     bullseyeGroup.add(outerDot);
 
     // Inner White Pinpoint Dot for surgical center aiming
@@ -325,6 +330,7 @@ export class FPSEngine {
       side: THREE.DoubleSide,
     });
     const innerDot = new THREE.Mesh(innerGeo, innerMat);
+    innerDot.raycast = () => {};
     innerDot.position.z = 0.002;
     bullseyeGroup.add(innerDot);
 
@@ -418,23 +424,33 @@ export class FPSEngine {
 
     this.raycaster.setFromCamera(this.centerCoord, this.camera);
 
+    let closestTarget: Target3D | null = null;
+    let minDistance = Infinity;
+
     for (const t of this.targets) {
       if (t.isHit) continue;
 
-      const intersects = this.raycaster.intersectObjects(t.mesh.children, true);
-      if (intersects.length > 0) {
-        t.isHit = true;
-        audioEngine.playHeadshot();
-
-        // Spawn shatter particles
-        this.spawnShatterParticles(t.worldPosition);
-
-        // Remove mesh from scene
-        this.scene.remove(t.mesh);
-        this.targets = this.targets.filter((item) => item.id !== t.id);
-
-        return { isHit: true, target: t };
+      t.mesh.updateMatrixWorld(true);
+      // Strictly test ray intersection only against the physical sphere mesh (exact visible ball surface)
+      const intersects = this.raycaster.intersectObject(t.headMesh, false);
+      if (intersects.length > 0 && intersects[0].distance < minDistance) {
+        minDistance = intersects[0].distance;
+        closestTarget = t;
       }
+    }
+
+    if (closestTarget) {
+      closestTarget.isHit = true;
+      audioEngine.playHeadshot();
+
+      // Spawn shatter particles
+      this.spawnShatterParticles(closestTarget.worldPosition);
+
+      // Remove mesh from scene
+      this.scene.remove(closestTarget.mesh);
+      this.targets = this.targets.filter((item) => item.id !== closestTarget.id);
+
+      return { isHit: true, target: closestTarget };
     }
 
     return { isHit: false, target: null };
