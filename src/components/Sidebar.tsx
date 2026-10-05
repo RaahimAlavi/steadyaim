@@ -14,6 +14,7 @@ import {
   Video,
 } from 'lucide-react';
 import { audioEngine } from '../utils/audioEngine';
+import { TargetLogo } from './TargetLogo';
 
 export type NavTab =
   | 'hero'
@@ -24,6 +25,7 @@ export type NavTab =
   | 'stopping'
   | 'analytics'
   | 'clip-analyzer'
+  | 'leaderboard'
   | 'calibrator';
 
 interface SidebarProps {
@@ -64,15 +66,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={() => handleSelect('hero')}
           className="flex items-center gap-2.5 text-left group cursor-pointer"
         >
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#ff4655] to-[#00f5d4] p-[1.5px] shadow-[0_0_12px_rgba(0,245,212,0.4)]">
-            <div className="w-full h-full bg-[#080b12] rounded-[6.5px] flex items-center justify-center">
-              <Crosshair className="w-4 h-4 text-[#00f5d4] group-hover:rotate-90 transition-transform duration-300" />
-            </div>
+          <div className="w-8 h-8 rounded-lg bg-[#141a26] border border-[#222d42] flex items-center justify-center">
+            <TargetLogo size={20} />
           </div>
           <div>
             <div className="font-black text-sm tracking-widest text-white uppercase flex items-center gap-1.5">
               STEADYAIM
-              <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-[#00f5d4]/20 text-[#00f5d4]">
+              <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-blue-500/20 text-blue-300">
                 PRO
               </span>
             </div>
@@ -143,39 +143,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
           <div className="space-y-1">
             <button
-              onClick={() => handleSelect('radiant')}
+              onClick={() => handleSelect('leaderboard')}
               onMouseEnter={() => audioEngine.playHover()}
-              className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-[#0f1422] transition-colors cursor-pointer"
+              className={navItemClass(activeTab === 'leaderboard')}
             >
-              <div className="flex items-center gap-3">
-                <Globe className="w-4 h-4 text-slate-400" />
-                <span>Global Aim Rank</span>
-              </div>
-              <span className="text-[10px] font-mono text-slate-500">IMMORTAL</span>
+              <Globe className="w-4 h-4 text-blue-400" />
+              <span>Global Aim Rank</span>
             </button>
 
             <button
-              onClick={() => handleSelect('tile-frenzy')}
+              onClick={() => handleSelect('leaderboard')}
               onMouseEnter={() => audioEngine.playHover()}
               className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-[#0f1422] transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-3">
-                <Calendar className="w-4 h-4 text-slate-400" />
+                <Calendar className="w-4 h-4 text-emerald-400" />
                 <span>Daily Challenge</span>
               </div>
-              <span className="w-2 h-2 rounded-full bg-[#00f5d4] animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             </button>
 
             <button
-              onClick={() => handleSelect('radiant')}
+              onClick={() => handleSelect('leaderboard')}
               onMouseEnter={() => audioEngine.playHover()}
               className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-[#0f1422] transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-3">
-                <Trophy className="w-4 h-4 text-[#ffb703]" />
+                <Trophy className="w-4 h-4 text-amber-400" />
                 <span>League Flight</span>
               </div>
-              <span className="text-[10px] font-mono text-[#00f5d4] font-bold">#16</span>
+              <span className="text-[10px] font-mono text-blue-400 font-bold">#13</span>
             </button>
           </div>
         </div>

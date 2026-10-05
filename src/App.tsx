@@ -11,7 +11,9 @@ import { StoppingPowerDrill } from './components/StoppingPowerDrill';
 import { TileFrenzyDrill } from './components/TileFrenzyDrill';
 import { SensBenchmark } from './components/SensBenchmark';
 import { ClipAnalyzer } from './components/ClipAnalyzer';
+import { LeaderboardView } from './components/LeaderboardView';
 import { SettingsModal } from './components/SettingsModal';
+import { AuthModal } from './components/AuthModal';
 import ClickSpark from './components/reactbits/ClickSpark';
 import { calculateEDPI } from './utils/aimMath';
 import { Crosshair, Shield } from 'lucide-react';
@@ -45,6 +47,7 @@ export function App() {
   const [activeTab, setActiveTab] = useState<AppTab>('hero');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
@@ -79,8 +82,8 @@ export function App() {
   const currentEdpi = calculateEDPI(settings.dpi, settings.sensitivity);
 
   return (
-    <ClickSpark sparkColor="#00f5d4" sparkSize={10} sparkRadius={22} sparkCount={9} duration={350}>
-      <div className="min-h-screen bg-[#07090e] text-slate-100 flex overflow-hidden font-sans selection:bg-[#ff4655] selection:text-white">
+    <ClickSpark sparkColor="#3b82f6" sparkSize={8} sparkRadius={18} sparkCount={7} duration={300}>
+      <div className="min-h-screen bg-[#07090e] text-slate-100 flex overflow-hidden font-sans selection:bg-blue-600 selection:text-white select-none">
         {/* Left Navigation Sidebar */}
         <Sidebar
           activeTab={activeTab}
@@ -108,6 +111,7 @@ export function App() {
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             openSettings={() => setIsSettingsOpen(true)}
+            onOpenAuth={() => setIsAuthOpen(true)}
             toggleSound={toggleSound}
             toggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
             isFullscreen={isFullscreen}
@@ -131,6 +135,8 @@ export function App() {
               />
             )}
 
+            {activeTab === 'leaderboard' && <LeaderboardView />}
+
             {activeTab === 'hub' && (
               <div className="max-w-7xl mx-auto p-4 lg:p-8">
                 <DrillHub
@@ -153,6 +159,7 @@ export function App() {
                 <TileFrenzyDrill
                   settings={settings}
                   onOpenSettings={() => setIsSettingsOpen(true)}
+                  onExitDrill={() => setActiveTab('hub')}
                 />
               </div>
             )}
@@ -202,18 +209,18 @@ export function App() {
           <footer className="w-full bg-[#07090e] border-t border-[#161d2d] py-5 px-6 text-xs text-slate-500">
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#00f5d4]" />
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
                 <span className="font-semibold text-slate-300">STEADYAIM PRO</span>
                 <span>: Anti-Jitter & Calm Gunfight Execution Suite for Tactical FPS</span>
               </div>
 
               <div className="flex items-center gap-6 text-[11px]">
                 <span className="flex items-center gap-1.5 text-slate-400">
-                  <Crosshair className="w-3.5 h-3.5 text-[#ff4655]" />
+                  <Crosshair className="w-3.5 h-3.5 text-rose-500" />
                   <span>Target Confirmation {'>'} Panic Flicking</span>
                 </span>
                 <span className="flex items-center gap-1.5 text-slate-400">
-                  <Shield className="w-3.5 h-3.5 text-[#00f5d4]" />
+                  <Shield className="w-3.5 h-3.5 text-blue-400" />
                   <span>100% Anti-Cheat Safe (Native WebGL)</span>
                 </span>
               </div>
@@ -227,6 +234,12 @@ export function App() {
           onClose={() => setIsSettingsOpen(false)}
           settings={settings}
           onSave={(newSettings) => setSettings(newSettings)}
+        />
+
+        {/* Player Profile & Cloud Sync Modal */}
+        <AuthModal
+          isOpen={isAuthOpen}
+          onClose={() => setIsAuthOpen(false)}
         />
       </div>
     </ClickSpark>

@@ -322,30 +322,43 @@ export class FPSEngine {
   }
 
   /**
-   * Spawns a glowing Tile Target on the arena wall (3D Aim Trainer Tile Frenzy style)
+   * Spawns a cobalt blue sphere target with orange core dots (matching 3D Aim Trainer benchmark)
    */
   public spawnTile(xPos: number, yPos: number, zPos: number = -15): Target3D {
     const group = new THREE.Group();
 
-    // High-tech Glowing Square Tile
-    const tileGeo = new THREE.BoxGeometry(0.7, 0.7, 0.12);
-    const tileMat = new THREE.MeshStandardMaterial({
-      color: 0xffb703,
-      emissive: 0xffb703,
-      emissiveIntensity: 0.5,
+    // 1. Cobalt Blue Shaded Sphere
+    const sphereGeo = new THREE.SphereGeometry(0.38, 24, 24);
+    const sphereMat = new THREE.MeshStandardMaterial({
+      color: 0x1d4ed8,
+      emissive: 0x1e3a8a,
+      emissiveIntensity: 0.65,
       roughness: 0.3,
-      metalness: 0.7,
+      metalness: 0.6,
     });
-    const tileMesh = new THREE.Mesh(tileGeo, tileMat);
-    tileMesh.name = 'head';
-    group.add(tileMesh);
+    const sphereMesh = new THREE.Mesh(sphereGeo, sphereMat);
+    sphereMesh.name = 'head';
+    group.add(sphereMesh);
 
-    // Neon Frame around Tile
-    const frameGeo = new THREE.BoxGeometry(0.76, 0.76, 0.06);
-    const frameMat = new THREE.MeshBasicMaterial({ color: 0x00f5d4 });
-    const frameMesh = new THREE.Mesh(frameGeo, frameMat);
-    frameMesh.position.z = -0.04;
-    group.add(frameMesh);
+    // 2. Subtle Geometric Latitude/Longitude Wireframe
+    const wireGeo = new THREE.WireframeGeometry(new THREE.SphereGeometry(0.382, 16, 16));
+    const wireMat = new THREE.LineBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0.35 });
+    const wireMesh = new THREE.LineSegments(wireGeo, wireMat);
+    group.add(wireMesh);
+
+    // 3. Bright Orange Core & Equatorial Target Dots (matching screenshot)
+    const dotGeo = new THREE.SphereGeometry(0.065, 12, 12);
+    const dotMat = new THREE.MeshBasicMaterial({ color: 0xfb923c });
+
+    const centerDot = new THREE.Mesh(dotGeo, dotMat);
+    centerDot.position.set(0, 0, 0.35);
+    group.add(centerDot);
+
+    [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2].forEach((ang) => {
+      const d = new THREE.Mesh(dotGeo, dotMat);
+      d.position.set(Math.cos(ang) * 0.35, Math.sin(ang) * 0.35, 0.08);
+      group.add(d);
+    });
 
     group.position.set(xPos, yPos, zPos);
     group.lookAt(this.camera.position);
@@ -354,7 +367,7 @@ export class FPSEngine {
     const targetObj: Target3D = {
       id: `tile-${Date.now()}-${Math.random()}`,
       mesh: group,
-      headMesh: tileMesh,
+      headMesh: sphereMesh,
       worldPosition: new THREE.Vector3(xPos, yPos, zPos),
       spawnTime: performance.now(),
       isHit: false,

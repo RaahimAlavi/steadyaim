@@ -13,6 +13,8 @@ import {
   Menu,
   Video,
   Home,
+  Trophy,
+  User,
 } from 'lucide-react';
 import { audioEngine } from '../utils/audioEngine';
 
@@ -25,6 +27,7 @@ export type AppTab =
   | 'stopping'
   | 'analytics'
   | 'clip-analyzer'
+  | 'leaderboard'
   | 'calibrator';
 
 interface NavbarProps {
@@ -32,6 +35,7 @@ interface NavbarProps {
   activeTab: AppTab;
   setActiveTab: (tab: AppTab) => void;
   openSettings: () => void;
+  onOpenAuth: () => void;
   toggleSound: () => void;
   toggleSidebar: () => void;
   isFullscreen: boolean;
@@ -43,6 +47,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
   openSettings,
+  onOpenAuth,
   toggleSound,
   toggleSidebar,
   isFullscreen,
@@ -57,7 +62,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="w-full bg-[#080b12]/95 border-b border-[#182033] px-4 lg:px-6 py-2.5 sticky top-0 z-30 backdrop-blur-md">
+    <header className="w-full bg-[#080b12]/95 border-b border-[#182033] px-4 lg:px-6 py-2.5 sticky top-0 z-30 backdrop-blur-md select-none">
       <div className="w-full flex items-center justify-between gap-3">
         {/* Left: Mobile Sidebar Toggle + Mode Navigation Pills */}
         <div className="flex items-center gap-3">
@@ -79,7 +84,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onMouseEnter={() => audioEngine.playHover()}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'hero'
-                  ? 'bg-gradient-to-r from-[#ea580c] to-[#f97316] text-white shadow-sm'
+                  ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-[#161e31]'
               }`}
             >
@@ -92,11 +97,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               onMouseEnter={() => audioEngine.playHover()}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'radiant'
-                  ? 'bg-[#00f5d4] text-[#07090e] shadow-[0_0_12px_rgba(0,245,212,0.4)]'
+                  ? 'bg-blue-500 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-[#161e31]'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <Sparkles className="w-3.5 h-3.5 text-blue-300" />
               <span>Path to Radiant</span>
             </button>
 
@@ -118,12 +123,25 @@ export const Navbar: React.FC<NavbarProps> = ({
               onMouseEnter={() => audioEngine.playHover()}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'tile-frenzy'
-                  ? 'bg-[#ffb703] text-black font-extrabold shadow-[0_0_12px_rgba(255,183,3,0.4)]'
+                  ? 'bg-amber-500 text-black font-extrabold shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-[#161e31]'
               }`}
             >
-              <Flame className="w-3.5 h-3.5 text-[#ffb703]" />
+              <Flame className="w-3.5 h-3.5 text-amber-400" />
               <span>Tile Frenzy</span>
+            </button>
+
+            <button
+              onClick={() => handleTabClick('leaderboard')}
+              onMouseEnter={() => audioEngine.playHover()}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'leaderboard'
+                  ? 'bg-[#1b253b] text-amber-400 border border-amber-500/40'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#161e31]'
+              }`}
+            >
+              <Trophy className="w-3.5 h-3.5 text-amber-400" />
+              <span>Leaderboard</span>
             </button>
 
             <button
@@ -131,28 +149,41 @@ export const Navbar: React.FC<NavbarProps> = ({
               onMouseEnter={() => audioEngine.playHover()}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'clip-analyzer'
-                  ? 'bg-[#1b253b] text-[#00f5d4] border border-[#00f5d4]/40'
+                  ? 'bg-[#1b253b] text-blue-400 border border-blue-500/40'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-[#161e31]'
               }`}
             >
-              <Video className="w-3.5 h-3.5 text-[#00f5d4]" />
+              <Video className="w-3.5 h-3.5 text-blue-400" />
               <span>VOD Analyzer</span>
             </button>
           </nav>
         </div>
 
-        {/* Right: Telemetry, Sound & Fullscreen Controls */}
-        <div className="flex items-center gap-2.5">
+        {/* Right: Telemetry, User Auth, Sound & Fullscreen Controls */}
+        <div className="flex items-center gap-2">
           {/* Active Sensitivity Pill */}
-          <div className="hidden md:flex items-center gap-2 bg-[#0e1320] border border-[#1d263b] rounded-xl px-3 py-1.5 text-xs shadow-inner">
+          <div className="hidden md:flex items-center gap-2 bg-[#0e1320] border border-[#1d263b] rounded-xl px-3 py-1.5 text-xs">
             <span className="text-slate-400 font-mono text-[11px]">SENS</span>
-            <span className="font-bold text-[#00f5d4] font-mono">{settings.sensitivity}</span>
+            <span className="font-bold text-blue-400 font-mono">{settings.sensitivity}</span>
             <span className="text-slate-600">·</span>
             <span className="text-slate-400 font-mono text-[11px]">eDPI</span>
             <span className="font-bold text-white font-mono">{edpi}</span>
             <span className="text-slate-600">·</span>
             <span className="font-mono text-slate-400 text-[11px]">{cm360}cm/360</span>
           </div>
+
+          {/* User Account / Cloud Sync Modal Trigger */}
+          <button
+            onClick={() => {
+              audioEngine.playClick();
+              onOpenAuth();
+            }}
+            title="Account, Cloud Sync & Session Database"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#141b2a] hover:bg-[#1c2438] border border-[#232f48] text-xs font-bold text-slate-200 hover:text-white transition-all cursor-pointer"
+          >
+            <User className="w-3.5 h-3.5 text-blue-400" />
+            <span className="hidden sm:inline">Sync & Cloud</span>
+          </button>
 
           {/* Sound Synthesizer Toggle */}
           <button
@@ -161,10 +192,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               toggleSound();
             }}
             title={settings.soundEnabled ? 'Mute Tactical Sounds' : 'Enable Tactical Sounds'}
-            className="p-2 rounded-xl bg-[#0f1422] border border-[#1e263d] text-slate-300 hover:text-white hover:border-[#00f5d4]/40 transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-[#0f1422] border border-[#1e263d] text-slate-300 hover:text-white transition-colors cursor-pointer"
           >
             {settings.soundEnabled ? (
-              <Volume2 className="w-4 h-4 text-[#00f5d4]" />
+              <Volume2 className="w-4 h-4 text-blue-400" />
             ) : (
               <VolumeX className="w-4 h-4 text-slate-500" />
             )}
@@ -177,10 +208,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               toggleFullscreen();
             }}
             title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen (F11)'}
-            className="p-2 rounded-xl bg-[#0f1422] border border-[#1e263d] text-slate-300 hover:text-white hover:border-[#00f5d4]/40 transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-[#0f1422] border border-[#1e263d] text-slate-300 hover:text-white transition-colors cursor-pointer"
           >
             {isFullscreen ? (
-              <Minimize className="w-4 h-4 text-[#ffb703]" />
+              <Minimize className="w-4 h-4 text-amber-400" />
             ) : (
               <Maximize className="w-4 h-4 text-slate-300" />
             )}
@@ -192,9 +223,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               audioEngine.playClick();
               openSettings();
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#151c2e] border border-[#242f49] hover:border-[#ff4655]/60 text-xs font-bold text-slate-200 hover:text-white transition-all cursor-pointer shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#151c2e] border border-[#242f49] hover:border-slate-500 text-xs font-bold text-slate-200 hover:text-white transition-all cursor-pointer shadow-sm"
           >
-            <Sliders className="w-3.5 h-3.5 text-[#ff4655]" />
+            <Sliders className="w-3.5 h-3.5 text-slate-400" />
             <span className="hidden sm:inline">{settings.dpi} DPI</span>
           </button>
         </div>

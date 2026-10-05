@@ -3,40 +3,30 @@ import type { UserSettings, DrillResult, TargetShotDetail } from '../types';
 import { FPSEngine } from '../utils/fpsEngine';
 import { MotionTracker } from '../utils/motionAnalytics';
 import { sounds } from '../utils/soundEffects';
-import { HUDCrosshair } from './HUDCrosshair';
+import { PauseMenu } from './PauseMenu';
 import { ResultModal } from './ResultModal';
-import gsap from 'gsap';
-import {
-  Zap,
-  Play,
-  RotateCcw,
-  Crosshair,
-  Flame,
-  Maximize2,
-  Minimize2,
-  Clock,
-  Sparkles,
-} from 'lucide-react';
+import { storageEngine } from '../utils/storageEngine';
+import { Clock, Play, Maximize2, Star } from 'lucide-react';
 
 interface TileFrenzyDrillProps {
   settings: UserSettings;
   onOpenSettings: () => void;
+  onExitDrill?: () => void;
 }
 
 export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
   settings,
   onOpenSettings,
+  onExitDrill,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fpsEngineRef = useRef<FPSEngine | null>(null);
   const motionTrackerRef = useRef<MotionTracker>(new MotionTracker());
 
-  const streakBadgeRef = useRef<HTMLDivElement | null>(null);
-  const scoreCounterRef = useRef<HTMLSpanElement | null>(null);
-
   const [isLocked, setIsLocked] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);
 
@@ -48,7 +38,6 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
   const [score, setScore] = useState(0);
   const [hitsCount, setHitsCount] = useState(0);
   const [missesCount, setMissesCount] = useState(0);
-  const [currentStreak, setCurrentStreak] = useState(0);
   const [tenseFlagsCount, setTenseFlagsCount] = useState(0);
 
   // Telemetry
@@ -86,39 +75,58 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  const toggleFullscreen = useCallback(() => {
-    if (!document.fullscreenElement) {
-      containerRef.current?.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
-    }
-  }, []);
-
   const requestLock = useCallback(() => {
-    if (canvasRef.current) {
+    if (canvasRef.current && !isPaused) {
       canvasRef.current.requestPointerLock();
     }
-  }, []);
+  }, [isPaused]);
 
   useEffect(() => {
     const handleLockChange = () => {
-      setIsLocked(document.pointerLockElement === canvasRef.current);
+      const locked = document.pointerLockElement === canvasRef.current;
+      setIsLocked(locked);
+
+      // If user unlocks during game without our pause menu open, show pause menu
+      if (!locked && isPlaying && !showResultModal) {
+        setIsPaused(true);
+        if (timerIntervalRef.current) {
+          clearInterval(timerIntervalRef.current);
+          timerIntervalRef.current = null;
+        }
+      }
     };
     document.addEventListener('pointerlockchange', handleLockChange);
     return () => document.removeEventListener('pointerlockchange', handleLockChange);
-  }, []);
+  }, [isPlaying, showResultModal]);
 
-  // Spawn random glowing tile in 3D firing range
+  // Keyboard shortcut listener for Pause (Escape / Tab) and Quick Restart (Y)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'KeyY' && isPlaying) {
+        restartDrill();
+      } else if (e.code === 'Tab' && isPlaying) {
+        e.preventDefault();
+        if (isPaused) {
+          resumeDrill();
+        } else {
+          pauseDrill();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPlaying, isPaused]);
+
+  // Spawn random sphere targets in 3D firing range
   const spawnRandomTile = useCallback(() => {
     if (!fpsEngineRef.current) return;
-    // Spread tiles across front sector (X: -4 to 4, Y: 1.0 to 2.4, Z: -14 to -18)
     const x = (Math.random() - 0.5) * 8.5;
     const y = 1.0 + Math.random() * 1.35;
     const z = -14 - Math.random() * 3.5;
     fpsEngineRef.current.spawnTile(x, y, z);
   }, []);
 
-  // Keep 3 active tiles on screen
+  // Keep 3 active targets on screen
   const maintainThreeTiles = useCallback(() => {
     if (!fpsEngineRef.current) return;
     const active = fpsEngineRef.current.getActiveTargetsCount();
@@ -130,6 +138,7 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
   // Finish round
   const finishDrill = useCallback(() => {
     setIsPlaying(false);
+    setIsPaused(false);
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
       timerIntervalRef.current = null;
@@ -163,6 +172,22 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
     else if (hitsCount >= 22) grade = 'B';
     else grade = 'C';
 
+    const starsEarned = score >= 3500 ? 3 : score >= 2500 ? 2 : score >= 1500 ? 1 : 0;
+
+    // Save session to local database
+    storageEngine.recordSession({
+      drillType: 'tile-frenzy',
+      drillName: 'Tile Frenzy 30s',
+      score,
+      starsEarned,
+      accuracy,
+      avgReactionMs: avgReaction,
+      jitterVariancePx: Number(((100 - avgJitter) * 0.05).toFixed(1)),
+    });
+
+    // Save earned stars to node 3
+    storageEngine.saveNodeStars(3, starsEarned);
+
     const result: DrillResult = {
       id: `tile-frenzy-${Date.now()}`,
       drillType: 'tile-frenzy',
@@ -181,29 +206,34 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
 
     setLastResult(result);
     setShowResultModal(true);
-  }, [hitsCount, missesCount, tenseFlagsCount]);
+  }, [hitsCount, missesCount, tenseFlagsCount, score]);
 
-  // Start 30s Drill
+  // Start Drill (Enters Fullscreen automatically as requested)
   const startDrill = () => {
     setIsPlaying(true);
+    setIsPaused(false);
     setShowResultModal(false);
     setTimeLeft(30);
     setScore(0);
     setHitsCount(0);
     setMissesCount(0);
-    setCurrentStreak(0);
     setTenseFlagsCount(0);
     shotDetailsRef.current = [];
     lastHitTimeRef.current = performance.now();
 
     fpsEngineRef.current?.clearTargets();
+
+    // Auto-enter fullscreen as requested
+    if (containerRef.current && !document.fullscreenElement) {
+      containerRef.current.requestFullscreen().catch(() => {});
+    }
+
     requestLock();
 
     setTimeout(() => {
       maintainThreeTiles();
     }, 150);
 
-    // 30s countdown loop
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     timerIntervalRef.current = window.setInterval(() => {
       setTimeLeft((prev) => {
@@ -216,6 +246,37 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
     }, 1000);
   };
 
+  const pauseDrill = () => {
+    setIsPaused(true);
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+    if (document.pointerLockElement) {
+      document.exitPointerLock();
+    }
+  };
+
+  const resumeDrill = () => {
+    setIsPaused(false);
+    requestLock();
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    timerIntervalRef.current = window.setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          finishDrill();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const restartDrill = () => {
+    setIsPaused(false);
+    startDrill();
+  };
+
   // Clean timer on unmount
   useEffect(() => {
     return () => {
@@ -225,7 +286,7 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
 
   // Fire / Click Handler
   const handleFire = useCallback(() => {
-    if (!isPlaying || !fpsEngineRef.current) return;
+    if (!isPlaying || isPaused || !fpsEngineRef.current) return;
 
     const now = performance.now();
     const timeDelta = Math.round(now - (lastHitTimeRef.current || now));
@@ -242,36 +303,8 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
     const { isHit } = fpsEngineRef.current.checkHit();
 
     if (isHit) {
-      sounds.playHeadshot();
       setHitsCount((prev) => prev + 1);
-
-      // Score bonus based on streak
-      setCurrentStreak((prev) => {
-        const next = prev + 1;
-        const multiplier = Math.min(4, 1 + Math.floor(next / 5));
-        const pts = 100 * multiplier;
-
-        setScore((s) => {
-          const newScore = s + pts;
-          if (scoreCounterRef.current) {
-            gsap.fromTo(
-              scoreCounterRef.current,
-              { scale: 1.25, color: '#00f5d4' },
-              { scale: 1.0, color: '#ffffff', duration: 0.25 }
-            );
-          }
-          return newScore;
-        });
-
-        if (streakBadgeRef.current && next >= 4) {
-          gsap.fromTo(
-            streakBadgeRef.current,
-            { scale: 1.3, rotate: -2 },
-            { scale: 1.0, rotate: 0, duration: 0.25, ease: 'back.out(2)' }
-          );
-        }
-        return next;
-      });
+      setScore((s) => s + 100);
 
       shotDetailsRef.current.push({
         shotNumber: hitsCount + 1,
@@ -281,12 +314,11 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
         stopBounce,
       });
 
-      // Instantly spawn replacement tile to keep 3 active
+      // Instantly spawn replacement sphere
       spawnRandomTile();
     } else {
       sounds.playMiss();
       setMissesCount((prev) => prev + 1);
-      setCurrentStreak(0);
 
       shotDetailsRef.current.push({
         shotNumber: hitsCount + 1,
@@ -296,193 +328,164 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
         stopBounce,
       });
     }
-  }, [isPlaying, hitsCount, spawnRandomTile]);
+  }, [isPlaying, isPaused, hitsCount, spawnRandomTile]);
 
-  // Raw mouse listener
+  // Mouse Move in Canvas
   useEffect(() => {
-    if (!isLocked) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!fpsEngineRef.current) return;
+    const handleMove = (e: MouseEvent) => {
+      if (!isLocked || !isPlaying || isPaused || !fpsEngineRef.current) return;
       fpsEngineRef.current.handleMouseMove(e.movementX, e.movementY, settings.sensitivity);
-      motionTrackerRef.current.addSample(e.movementX, e.movementY, performance.now());
+      motionTrackerRef.current.addSample(e.movementX, e.movementY);
     };
 
+    window.addEventListener('mousemove', handleMove);
+    return () => window.removeEventListener('mousemove', handleMove);
+  }, [isLocked, isPlaying, isPaused, settings.sensitivity]);
+
+  // Click on Canvas
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
     const handleMouseDown = (e: MouseEvent) => {
-      if (e.button === 0 && isPlaying) {
-        handleFire();
+      if (e.button === 0) {
+        if (!isLocked) {
+          requestLock();
+        } else {
+          handleFire();
+        }
       }
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mousedown', handleMouseDown);
+    canvas.addEventListener('mousedown', handleMouseDown);
+    return () => canvas.removeEventListener('mousedown', handleMouseDown);
+  }, [isLocked, handleFire, requestLock]);
 
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mousedown', handleMouseDown);
-    };
-  }, [isLocked, isPlaying, settings.sensitivity, handleFire]);
+  // Live Star Calculation (1 Star: 1,500, 2 Stars: 2,500, 3 Stars: 3,500)
+  const currentStars = score >= 3500 ? 3 : score >= 2500 ? 2 : score >= 1500 ? 1 : 0;
+  const starProgressPercent = Math.min(100, Math.round((score / 3500) * 100));
 
   return (
     <div
       ref={containerRef}
-      className={`space-y-6 transition-all ${
-        isFullscreen
-          ? 'fixed inset-0 z-50 w-screen h-screen bg-[#07090e] p-4 flex flex-col justify-between space-y-0 overflow-hidden'
-          : ''
+      className={`relative w-full flex flex-col justify-between bg-[#080b12] text-white select-none ${
+        isFullscreen ? 'h-screen p-0 m-0 fixed inset-0 z-50' : 'h-[620px] rounded-3xl border border-[#1e263d] overflow-hidden'
       }`}
     >
-      {/* Top Banner */}
-      <div className="bg-[#121520] border border-[#23293c] rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ffb703] to-[#ff7b00] flex items-center justify-center text-[#090b11] shadow-lg shadow-[#ffb703]/25 font-black">
-            <Zap className="w-5 h-5 text-black" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-black text-white tracking-wide uppercase">
-                DYNAMIC TILE FRENZY (30 SECONDS)
-              </h2>
-              <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-[#ffb703]/20 text-[#ffb703] border border-[#ffb703]/30 font-mono">
-                RAPID SWITCHING
-              </span>
-            </div>
-            <p className="text-xs text-slate-400">
-              30-second rapid target destruction. Destroy tiles and decelerate cleanly on every stop.
-            </p>
+      {/* 3D WebGL Canvas */}
+      <canvas
+        ref={canvasRef}
+        onClick={!isPlaying ? startDrill : requestLock}
+        className="w-full h-full cursor-none block absolute inset-0 z-0"
+      />
+
+      {/* Minimal Green/Cyan Crosshair '+' matching Screenshot 2 */}
+      {isPlaying && !isPaused && (
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
+          <div className="relative w-4 h-4 flex items-center justify-center">
+            <div className="absolute w-[12px] h-[1.75px] bg-[#00f5d4] shadow-sm" />
+            <div className="absolute h-[12px] w-[1.75px] bg-[#00f5d4] shadow-sm" />
           </div>
         </div>
+      )}
 
-        {/* Live Counters */}
-        <div className="flex items-center gap-2.5">
+      {/* Center Bottom HUD matching Screenshot 2 (3D Aim Trainer) */}
+      {isPlaying && !isPaused && (
+        <div className="absolute bottom-6 inset-x-0 pointer-events-none flex flex-col items-center justify-end z-20">
           {/* Timer Clock */}
-          <div className="bg-[#0b0e16] border border-[#1e2436] rounded-xl px-4 py-1.5 text-center flex items-center gap-2">
-            <Clock className="w-4 h-4 text-[#ff4655] animate-pulse" />
-            <div>
-              <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider block">
-                Time
-              </span>
-              <span className={`text-sm font-black font-mono ${timeLeft <= 5 ? 'text-[#ff4655]' : 'text-white'}`}>
-                {timeLeft}s
-              </span>
+          <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-blue-400 mb-1">
+            <Clock className="w-3.5 h-3.5 text-blue-400" />
+            <span>00:{timeLeft.toString().padStart(2, '0')}</span>
+          </div>
+
+          {/* Large Bold Points Number */}
+          <div className="text-4xl font-black text-white font-mono tracking-tight leading-none mb-0.5">
+            {score}
+          </div>
+          <span className="text-[10px] font-mono tracking-widest text-slate-400 uppercase mb-2">
+            POINTS
+          </span>
+
+          {/* Star Progression Track matching Screenshot 2 */}
+          <div className="flex flex-col items-center gap-1 w-36">
+            <div className="flex items-center justify-between w-full px-2">
+              {[1, 2, 3].map((starIdx) => (
+                <Star
+                  key={starIdx}
+                  className={`w-4 h-4 transition-colors ${
+                    currentStars >= starIdx
+                      ? 'fill-amber-400 text-amber-400'
+                      : 'text-slate-600 fill-transparent'
+                  }`}
+                />
+              ))}
+            </div>
+            {/* Progress line underneath */}
+            <div className="w-full h-1 bg-[#141b29] rounded-full overflow-hidden border border-[#222e44]">
+              <div
+                className="h-full bg-blue-500 transition-all duration-300 rounded-full"
+                style={{ width: `${starProgressPercent}%` }}
+              />
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Score Counter */}
-          <div className="bg-[#0b0e16] border border-[#1e2436] rounded-xl px-3.5 py-1.5 text-center">
-            <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider block">
-              Score
-            </span>
-            <span ref={scoreCounterRef} className="text-sm font-black font-mono text-[#00f5d4]">
-              {score}
-            </span>
+      {/* Bottom Right Telemetry Badges matching Screenshot 2 */}
+      {isPlaying && !isPaused && (
+        <div className="absolute bottom-6 right-8 pointer-events-none flex flex-col items-end gap-1.5 z-20 text-right">
+          <span className="text-[10px] font-mono text-slate-400 tracking-wider">
+            QUICK RESTART <strong className="text-white bg-[#1b2336] px-1.5 py-0.5 rounded border border-[#2b3956]">Y</strong>
+          </span>
+          <div className="flex items-center gap-2 text-xs font-mono font-bold text-blue-400">
+            <span>PISTOL</span>
+            <span className="text-base text-white">∞</span>
           </div>
+        </div>
+      )}
 
-          {/* Hits Counter */}
-          <div className="bg-[#0b0e16] border border-[#1e2436] rounded-xl px-3.5 py-1.5 text-center">
-            <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider block">
-              Hits
-            </span>
-            <span className="text-sm font-black font-mono text-white">
-              {hitsCount}
-            </span>
+      {/* Pre-Drill Start Overlay */}
+      {!isPlaying && !showResultModal && (
+        <div
+          onClick={startDrill}
+          className="absolute inset-0 bg-[#070a12]/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center cursor-pointer z-30"
+        >
+          <div className="w-14 h-14 rounded-2xl bg-blue-500/15 border border-blue-500/40 flex items-center justify-center mb-4">
+            <Play className="w-6 h-6 text-blue-400 ml-0.5" />
           </div>
-
-          {currentStreak >= 4 && (
-            <div
-              ref={streakBadgeRef}
-              className="bg-[#ff4655]/20 border border-[#ff4655]/50 rounded-xl px-3 py-1.5 flex items-center gap-1.5 text-xs font-bold text-[#ff4655] shadow-lg shadow-[#ff4655]/25"
-            >
-              <Flame className="w-3.5 h-3.5 text-[#ff4655]" />
-              <span>{currentStreak} COMBO</span>
-            </div>
-          )}
-
+          <h3 className="text-2xl font-black text-white mb-1.5 tracking-wide uppercase">
+            TILE FRENZY (30 SECONDS)
+          </h3>
+          <p className="text-xs text-slate-400 max-w-sm mb-6 leading-relaxed">
+            Eliminate cobalt blue sphere targets as fast as possible. Press Play to auto-fullscreen and lock cursor.
+          </p>
           <button
-            onClick={toggleFullscreen}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1a2133] hover:bg-[#232b40] border border-[#2b3752] text-xs font-bold text-slate-200 hover:text-white transition-all shadow-md ml-1"
-            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Aim Lab Fullscreen Focus Mode'}
+            onClick={startDrill}
+            className="px-8 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs tracking-widest uppercase transition-colors shadow-md flex items-center gap-2 cursor-pointer"
           >
-            {isFullscreen ? (
-              <>
-                <Minimize2 className="w-3.5 h-3.5 text-[#00f5d4]" />
-                <span className="hidden sm:inline">Exit Fullscreen</span>
-              </>
-            ) : (
-              <>
-                <Maximize2 className="w-3.5 h-3.5 text-[#00f5d4]" />
-                <span className="hidden sm:inline">Fullscreen Focus</span>
-              </>
-            )}
+            <Maximize2 className="w-4 h-4" />
+            <span>PLAY NOW (FULLSCREEN)</span>
           </button>
         </div>
-      </div>
+      )}
 
-      {/* 3D Viewport */}
-      <div
-        className={`relative overflow-hidden border border-[#222738] shadow-2xl bg-[#0a0c13] ${
-          isFullscreen ? 'flex-1 rounded-2xl w-full my-2' : 'rounded-3xl'
-        }`}
-      >
-        <canvas
-          ref={canvasRef}
-          onClick={!isPlaying ? startDrill : requestLock}
-          className={`w-full cursor-none block ${isFullscreen ? 'h-full' : 'h-[540px]'}`}
+      {/* In-Game Pause Menu matching Screenshot 3 */}
+      {isPaused && (
+        <PauseMenu
+          exerciseTitle="Chapter 1 - Exercise 3: Tile Frenzy"
+          onResume={resumeDrill}
+          onRestart={restartDrill}
+          onOpenSettings={onOpenSettings}
+          onExit={() => {
+            setIsPlaying(false);
+            setIsPaused(false);
+            if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+            if (onExitDrill) onExitDrill();
+          }}
         />
+      )}
 
-        <HUDCrosshair settings={settings} isTense={false} />
-
-        {/* Start Overlay */}
-        {!isPlaying && !showResultModal && (
-          <div
-            onClick={startDrill}
-            className="absolute inset-0 bg-black/75 backdrop-blur-[4px] flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-all hover:bg-black/65"
-          >
-            <div className="w-16 h-16 rounded-2xl bg-[#ffb703]/20 border border-[#ffb703]/50 flex items-center justify-center mb-4 shadow-xl shadow-[#ffb703]/30">
-              <Play className="w-8 h-8 text-[#ffb703] ml-1" />
-            </div>
-            <h3 className="text-2xl font-black text-white mb-2 tracking-wide uppercase">
-              START TILE FRENZY (30 SECONDS)
-            </h3>
-            <p className="text-xs text-slate-300 max-w-md mb-6 leading-relaxed">
-              3 Active neon tiles on the arena firing wall. As soon as you hit a tile, a new one spawns.
-              Test raw target acquisition and clean deceleration.
-            </p>
-            <div className="flex items-center gap-3">
-              <div className="px-6 py-3 rounded-xl bg-[#ffb703] hover:bg-[#ffc633] text-black text-xs font-black tracking-wider uppercase shadow-xl shadow-[#ffb703]/35 transition-all">
-                Start 30s Challenge
-              </div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleFullscreen();
-                  startDrill();
-                }}
-                className="px-5 py-3 rounded-xl bg-[#1b2234] hover:bg-[#252f48] border border-[#2d3a56] text-white text-xs font-bold tracking-wider uppercase transition-all flex items-center gap-2"
-              >
-                <Maximize2 className="w-4 h-4 text-[#00f5d4]" />
-                <span>Fullscreen Focus</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Unlocked Resume Notice */}
-        {isPlaying && !isLocked && !showResultModal && (
-          <div
-            onClick={requestLock}
-            className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center p-6 text-center cursor-pointer"
-          >
-            <div className="w-12 h-12 rounded-xl bg-[#00f5d4]/20 border border-[#00f5d4]/40 flex items-center justify-center mb-3">
-              <Crosshair className="w-6 h-6 text-[#00f5d4]" />
-            </div>
-            <h4 className="text-lg font-bold text-white mb-1">Click to Resume Aim Lock</h4>
-            <p className="text-xs text-slate-400">Cursor was unlocked. Click anywhere to re-lock.</p>
-          </div>
-        )}
-      </div>
-
+      {/* Round Finished Result Modal */}
       <ResultModal
         isOpen={showResultModal}
         result={lastResult}
@@ -490,46 +493,6 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
         onOpenSettings={onOpenSettings}
         onClose={() => setShowResultModal(false)}
       />
-
-      {!isFullscreen && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-[#121520] border border-[#222738] rounded-2xl p-4 flex gap-3 shadow-lg">
-            <div className="w-8 h-8 rounded-xl bg-[#ffb703]/10 text-[#ffb703] flex items-center justify-center shrink-0">
-              <Zap className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-white mb-0.5">Rapid Path Economy</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Move your crosshair directly along the straightest line between tiles with minimal overshoot.
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-[#121520] border border-[#222738] rounded-2xl p-4 flex gap-3 shadow-lg">
-            <div className="w-8 h-8 rounded-xl bg-[#00f5d4]/10 text-[#00f5d4] flex items-center justify-center shrink-0">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-white mb-0.5">Relaxed Tempo</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Rushing leads to misses and tensed tendons. Build a consistent rhythm: flick, stop, click, next.
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-[#121520] border border-[#222738] rounded-2xl p-4 flex gap-3 shadow-lg">
-            <div className="w-8 h-8 rounded-xl bg-[#ff4655]/10 text-[#ff4655] flex items-center justify-center shrink-0">
-              <RotateCcw className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-white mb-0.5">Zero Panic Clicking</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Missed shots reset your multiplier streak. Confirm your crosshair on the tile before pulling the trigger.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
