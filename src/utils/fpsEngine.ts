@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { VALORANT_M_YAW, VALORANT_HORIZONTAL_FOV } from './aimMath';
 import { audioEngine } from './audioEngine';
 
@@ -23,6 +27,7 @@ export class FPSEngine {
   public scene: THREE.Scene;
   public camera: THREE.PerspectiveCamera;
   public renderer: THREE.WebGLRenderer;
+  private composer: EffectComposer;
   private canvas: HTMLCanvasElement;
 
   private targets: Target3D[] = [];
@@ -44,7 +49,8 @@ export class FPSEngine {
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x181e2b);
+    this.scene.background = new THREE.Color(0x0a0c12);
+    this.scene.fog = new THREE.FogExp2(0x0a0c12, 0.035); // Add infinite digital expanse fog
 
     // Initial camera with Valorant horizontal FOV (103 deg)
     const aspect = canvas.clientWidth / canvas.clientHeight || 16 / 9;
@@ -61,13 +67,31 @@ export class FPSEngine {
     this.renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
+    // Post-Processing Setup
+    const renderScene = new RenderPass(this.scene, this.camera);
+    
+    // Bloom (Resolution, strength, radius, threshold)
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      1.1, // strength
+      0.6, // radius
+      0.2  // threshold
+    );
+    
+    const outputPass = new OutputPass();
+
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.addPass(renderScene);
+    this.composer.addPass(bloomPass);
+    this.composer.addPass(outputPass);
+
     this.raycaster = new THREE.Raycaster();
     this.raycaster.params.Line = { threshold: 0 };
     this.raycaster.params.Points = { threshold: 0 };
     this.centerCoord = new THREE.Vector2(0, 0); // Exactly screen center
 
     // Muzzle flash light attached to camera
-    this.muzzleLight = new THREE.PointLight(0xfffaed, 0, 16);
+    this.muzzleLight = new THREE.PointLight(0xffffff, 0, 16);
     this.muzzleLight.position.set(0.2, -0.2, -0.6);
     this.camera.add(this.muzzleLight);
     this.scene.add(this.camera);
@@ -93,6 +117,9 @@ export class FPSEngine {
     this.camera.fov = this.calculateVerticalFov(aspect);
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height, false);
+    if (this.composer) {
+      this.composer.setSize(width, height);
+    }
   }
 
   /**
@@ -360,6 +387,7 @@ export class FPSEngine {
 
     group.position.set(x, y, z);
     group.lookAt(this.camera.position);
+    group.scale.set(0.001, 0.001, 0.001);
     this.scene.add(group);
 
     const targetObj: Target3D = {
@@ -384,6 +412,7 @@ export class FPSEngine {
 
     group.position.set(xPos, yPos, zPos);
     group.lookAt(this.camera.position);
+    group.scale.set(0.001, 0.001, 0.001);
     this.scene.add(group);
 
     const targetObj: Target3D = {
@@ -445,6 +474,7 @@ export class FPSEngine {
 
       // Spawn shatter particles
       this.spawnShatterParticles(closestTarget.worldPosition);
+      this.spawnFloatingText(closestTarget.worldPosition, '+100');
 
       // Remove mesh from scene
       this.scene.remove(closestTarget.mesh);
@@ -453,26 +483,76 @@ export class FPSEngine {
       return { isHit: true, target: closestTarget };
     }
 
+    audioEngine.playMiss();
     return { isHit: false, target: null };
   }
 
+  private floatTexts: { sprite: THREE.Sprite; life: number; maxLife: number }[] = [];
+
+  private spawnFloatingText(pos: THREE.Vector3, text: string) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.font = 'bold 48px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#00f5d4'; // neon cyan
+    ctx.shadowColor = '#00f5d4';
+    ctx.shadowBlur = 10;
+    ctx.fillText(text, 128, 80);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+    const sprite = new THREE.Sprite(mat);
+    
+    // Scale and position
+    sprite.scale.set(1.5, 0.75, 1.5);
+    sprite.position.copy(pos);
+    sprite.position.y += 0.4; // float above target
+
+    this.scene.add(sprite);
+    this.floatTexts.push({ sprite, life: 0, maxLife: 800 });
+  }
+
   /**
-   * Spawns crisp cobalt blue and orange shatter sparks on target break
+   * Spawns high-energy neon shatter particles on target break
    */
   private spawnShatterParticles(pos: THREE.Vector3) {
-    const pGeo = new THREE.BoxGeometry(0.065, 0.065, 0.065);
-    const blueMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6 });
-    const orangeMat = new THREE.MeshBasicMaterial({ color: 0xf97316 });
+    const pGeo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
+    const blueMat = new THREE.MeshStandardMaterial({ 
+      color: 0x3b82f6, 
+      emissive: 0x3b82f6, 
+      emissiveIntensity: 3.0,
+      roughness: 0.1
+    });
+    const orangeMat = new THREE.MeshStandardMaterial({ 
+      color: 0xf97316, 
+      emissive: 0xf97316, 
+      emissiveIntensity: 4.0,
+      roughness: 0.1
+    });
+    const whiteMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: 0xffffff,
+      emissiveIntensity: 5.0,
+      roughness: 0.1
+    });
 
-    for (let i = 0; i < 24; i++) {
-      const mat = i % 3 === 0 ? orangeMat : blueMat;
+    for (let i = 0; i < 32; i++) {
+      let mat = blueMat;
+      if (i % 4 === 0) mat = orangeMat;
+      else if (i % 7 === 0) mat = whiteMat;
+      
       const pMesh = new THREE.Mesh(pGeo, mat);
       pMesh.position.copy(pos);
 
+      // Explosive outward velocity
       const vel = new THREE.Vector3(
-        (Math.random() - 0.5) * 8,
-        (Math.random() - 0.5) * 6 + 1.2,
-        (Math.random() - 0.5) * 8
+        (Math.random() - 0.5) * 14,
+        (Math.random() - 0.2) * 10,
+        (Math.random() - 0.5) * 14
       );
 
       this.scene.add(pMesh);
@@ -480,7 +560,7 @@ export class FPSEngine {
         mesh: pMesh,
         velocity: vel,
         life: 0,
-        maxLife: 260 + Math.random() * 180, // ms
+        maxLife: 300 + Math.random() * 250, // ms
       });
     }
   }
@@ -519,10 +599,20 @@ export class FPSEngine {
       for (let i = this.particles.length - 1; i >= 0; i--) {
         const p = this.particles[i];
         p.life += dt * 1000;
-        p.velocity.y -= 9.8 * dt; // gravity
+        
+        // Physics: drag and gravity
+        p.velocity.x -= p.velocity.x * 2.5 * dt;
+        p.velocity.z -= p.velocity.z * 2.5 * dt;
+        p.velocity.y -= 14.0 * dt; // heavier gravity
+        
         p.mesh.position.addScaledVector(p.velocity, dt);
-        p.mesh.rotation.x += dt * 5;
-        p.mesh.rotation.y += dt * 5;
+        p.mesh.rotation.x += dt * (p.velocity.y);
+        p.mesh.rotation.y += dt * (p.velocity.x);
+        
+        // Scale down as it dies
+        const lifeFract = 1 - (p.life / p.maxLife);
+        const scale = Math.max(0, lifeFract);
+        p.mesh.scale.setScalar(scale);
 
         if (p.life >= p.maxLife) {
           this.scene.remove(p.mesh);
@@ -530,9 +620,38 @@ export class FPSEngine {
         }
       }
 
-      // Rotate target decorative energy rings
+      // Update floating texts
+      for (let i = this.floatTexts.length - 1; i >= 0; i--) {
+        const ft = this.floatTexts[i];
+        ft.life += dt * 1000;
+        
+        ft.sprite.position.y += 0.8 * dt; // float up
+        
+        const lifeFract = ft.life / ft.maxLife;
+        ft.sprite.material.opacity = 1 - Math.pow(lifeFract, 3); // ease out opacity
+        
+        if (ft.life >= ft.maxLife) {
+          this.scene.remove(ft.sprite);
+          ft.sprite.material.map?.dispose();
+          ft.sprite.material.dispose();
+          this.floatTexts.splice(i, 1);
+        }
+      }
+
+      // Update targets (smooth spawn scale-in & decorative energy ring rotation)
+      const now = performance.now();
       this.targets.forEach((t) => {
         if (!t.isHit) {
+          const age = now - t.spawnTime;
+          if (age < 200) {
+            const p = age / 200;
+            // Smooth elastic curve: 0 to 1 with subtle 1.06 overshoot
+            const currentScale = Math.min(1.0, p * (1 + 0.15 * Math.sin(p * Math.PI)));
+            t.mesh.scale.setScalar(currentScale);
+          } else if (t.mesh.scale.x !== 1) {
+            t.mesh.scale.setScalar(1);
+          }
+
           const ring = t.mesh.getObjectByName('ring');
           if (ring) {
             ring.rotation.z += dt * 2.2;
@@ -540,7 +659,11 @@ export class FPSEngine {
         }
       });
 
-      this.renderer.render(this.scene, this.camera);
+      if (this.composer) {
+        this.composer.render();
+      } else {
+        this.renderer.render(this.scene, this.camera);
+      }
       this.animFrameId = requestAnimationFrame(animate);
     };
 

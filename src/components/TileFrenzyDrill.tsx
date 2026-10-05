@@ -1,8 +1,9 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import gsap from 'gsap';
 import type { UserSettings, DrillResult, TargetShotDetail } from '../types';
 import { FPSEngine } from '../utils/fpsEngine';
 import { MotionTracker } from '../utils/motionAnalytics';
-import { sounds } from '../utils/soundEffects';
+import { audioEngine } from '../utils/audioEngine';
 import { PauseMenu } from './PauseMenu';
 import { ResultModal } from './ResultModal';
 import { storageEngine } from '../utils/storageEngine';
@@ -25,6 +26,7 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fpsEngineRef = useRef<FPSEngine | null>(null);
   const motionTrackerRef = useRef<MotionTracker>(new MotionTracker());
+  const scoreTextRef = useRef<HTMLDivElement>(null);
 
   const [isLocked, setIsLocked] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -37,9 +39,15 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
 
   // Live Score & Stats
   const [score, setScore] = useState(0);
+  const [combo, setCombo] = useState(0);
   const [hitsCount, setHitsCount] = useState(0);
   const [missesCount, setMissesCount] = useState(0);
   const [tenseFlagsCount, setTenseFlagsCount] = useState(0);
+
+  const crosshairRef = useRef<HTMLDivElement>(null);
+  const hudWrapperRef = useRef<HTMLDivElement>(null);
+  const comboBadgeRef = useRef<HTMLDivElement>(null);
+  const starRefs = [useRef<SVGSVGElement>(null), useRef<SVGSVGElement>(null), useRef<SVGSVGElement>(null)];
 
   // Telemetry
   const shotDetailsRef = useRef<TargetShotDetail[]>([]);
@@ -184,7 +192,7 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
       timerIntervalRef.current = null;
     }
 
-    sounds.playSuccess();
+    audioEngine.playSuccess();
 
     if (document.pointerLockElement) {
       document.exitPointerLock();
@@ -255,6 +263,7 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
     setShowResultModal(false);
     setTimeLeft(30);
     setScore(0);
+    setCombo(0);
     setHitsCount(0);
     setMissesCount(0);
     setTenseFlagsCount(0);
@@ -358,13 +367,56 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
       setTenseFlagsCount((prev) => prev + 1);
     }
 
+    // Dynamic Crosshair spring bounce
+    if (crosshairRef.current) {
+      gsap.fromTo(crosshairRef.current, { scale: 1.35 }, { scale: 1.0, duration: 0.1, ease: 'power2.out' });
+    }
+
     const { isHit } = fpsEngineRef.current.checkHit();
 
     if (isHit) {
       setHitsCount((prev) => prev + 1);
-      setScore((s) => s + 100);
+
+      // Screen shake on HUD overlay
+      if (hudWrapperRef.current) {
+        gsap.fromTo(
+          hudWrapperRef.current,
+          { x: (Math.random() - 0.5) * 6, y: (Math.random() - 0.5) * 5 },
+          { x: 0, y: 0, duration: 0.1, ease: 'power2.out' }
+        );
+      }
+
+      // Combo streak counter
+      setCombo((prevCombo) => {
+        const nextCombo = prevCombo + 1;
+        if (comboBadgeRef.current && nextCombo >= 2) {
+          gsap.fromTo(comboBadgeRef.current, { scale: 1.4 }, { scale: 1.0, duration: 0.25, ease: 'back.out(2)' });
+        }
+        return nextCombo;
+      });
+
+      setScore((s) => {
+        const newScore = s + 100;
+        if (newScore >= 1500 && s < 1500 && starRefs[0].current) {
+          gsap.fromTo(starRefs[0].current, { scale: 2 }, { scale: 1, duration: 0.4, ease: 'elastic.out(1, 0.4)' });
+        } else if (newScore >= 2500 && s < 2500 && starRefs[1].current) {
+          gsap.fromTo(starRefs[1].current, { scale: 2 }, { scale: 1, duration: 0.4, ease: 'elastic.out(1, 0.4)' });
+        } else if (newScore >= 3500 && s < 3500 && starRefs[2].current) {
+          gsap.fromTo(starRefs[2].current, { scale: 2 }, { scale: 1, duration: 0.4, ease: 'elastic.out(1, 0.4)' });
+        }
+        return newScore;
+      });
+
       setHitmarkerActive(true);
       setTimeout(() => setHitmarkerActive(false), 90);
+
+      if (scoreTextRef.current) {
+        gsap.fromTo(
+          scoreTextRef.current,
+          { scale: 1.4, color: '#00f5d4' },
+          { scale: 1, color: '#ffffff', duration: 0.3, ease: 'power2.out' }
+        );
+      }
 
       shotDetailsRef.current.push({
         shotNumber: hitsCount + 1,
@@ -377,7 +429,7 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
       // Instantly spawn replacement sphere
       spawnRandomTile();
     } else {
-      sounds.playMiss();
+      setCombo(0);
       setMissesCount((prev) => prev + 1);
 
       shotDetailsRef.current.push({
@@ -437,10 +489,15 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
         className="w-full h-full cursor-none block absolute inset-0 z-0"
       />
 
+      {/* Dynamic Subtle Vignette during active gameplay for tunnel focus */}
+      {isPlaying && !isPaused && (
+        <div className="absolute inset-0 pointer-events-none z-10 bg-radial-[circle_at_center,_transparent_55%,_rgba(4,7,14,0.8)_100%]" />
+      )}
+
       {/* Minimal Green/Cyan Crosshair '+' with Hitmarker Feedback */}
       {isPlaying && !isPaused && (
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
-          <div className="relative w-8 h-8 flex items-center justify-center">
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-20">
+          <div ref={crosshairRef} className="relative w-8 h-8 flex items-center justify-center">
             {/* Center '+' Crosshair */}
             <div className="absolute w-[12px] h-[1.75px] bg-[#00f5d4] shadow-sm" />
             <div className="absolute h-[12px] w-[1.75px] bg-[#00f5d4] shadow-sm" />
@@ -458,15 +515,27 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
 
       {/* Center Bottom HUD matching Screenshot 2 (3D Aim Trainer) */}
       {isPlaying && !isPaused && (
-        <div className="absolute bottom-6 inset-x-0 pointer-events-none flex flex-col items-center justify-end z-20">
-          {/* Timer Clock */}
-          <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-blue-400 mb-1">
-            <Clock className="w-3.5 h-3.5 text-blue-400" />
+        <div ref={hudWrapperRef} className="absolute bottom-6 inset-x-0 pointer-events-none flex flex-col items-center justify-end z-20">
+          {/* Combo Streak Counter Badge */}
+          {combo >= 2 && (
+            <div
+              ref={comboBadgeRef}
+              className="mb-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500/25 to-orange-500/25 border border-amber-400/50 text-amber-300 font-mono text-[11px] font-black tracking-widest uppercase shadow-[0_0_12px_rgba(245,158,11,0.3)] animate-pulse"
+            >
+              {combo}x STREAK
+            </div>
+          )}
+
+          {/* Timer Clock with 10s Low Time Red Pulse */}
+          <div className={`flex items-center gap-1.5 text-xs font-mono font-bold mb-1 transition-colors ${
+            timeLeft <= 10 ? 'text-rose-400 animate-pulse font-black' : 'text-blue-400'
+          }`}>
+            <Clock className={`w-3.5 h-3.5 ${timeLeft <= 10 ? 'text-rose-400' : 'text-blue-400'}`} />
             <span>00:{timeLeft.toString().padStart(2, '0')}</span>
           </div>
 
           {/* Large Bold Points Number */}
-          <div className="text-4xl font-black text-white font-mono tracking-tight leading-none mb-0.5">
+          <div ref={scoreTextRef} className="text-4xl font-black text-white font-mono tracking-tight leading-none mb-0.5">
             {score}
           </div>
           <span className="text-[10px] font-mono tracking-widest text-slate-400 uppercase mb-2">
@@ -479,6 +548,7 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
               {[1, 2, 3].map((starIdx) => (
                 <Star
                   key={starIdx}
+                  ref={starRefs[starIdx - 1]}
                   className={`w-4 h-4 transition-colors ${
                     currentStars >= starIdx
                       ? 'fill-amber-400 text-amber-400'

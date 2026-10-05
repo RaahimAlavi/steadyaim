@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { UserSettings } from './types';
 import { Navbar, type AppTab } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
@@ -17,6 +17,23 @@ import { AuthModal } from './components/AuthModal';
 import ClickSpark from './components/reactbits/ClickSpark';
 import { calculateEDPI } from './utils/aimMath';
 import { Crosshair, Shield } from 'lucide-react';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
+
+// Wrapper for smooth enter animations using GSAP
+function PageWrapper({ children, tabKey }: { children: React.ReactNode; tabKey: string }) {
+  const container = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    gsap.fromTo(
+      container.current,
+      { opacity: 0, y: 15 },
+      { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }
+    );
+  }, [tabKey]); // Re-run animation when tab changes
+
+  return <div ref={container} className="w-full h-full">{children}</div>;
+}
 
 export function App() {
   const [settings, setSettings] = useState<UserSettings>(() => {
@@ -53,6 +70,41 @@ export function App() {
   useEffect(() => {
     localStorage.setItem('steadyaim_settings', JSON.stringify(settings));
   }, [settings]);
+
+  // Dynamic Page Title
+  useEffect(() => {
+    switch (activeTab) {
+      case 'tile-frenzy':
+        document.title = 'SteadyAim · Tile Frenzy (Live)';
+        break;
+      case 'whisper':
+        document.title = 'SteadyAim · Whisper Grip 5m (Live)';
+        break;
+      case 'stopping':
+        document.title = 'SteadyAim · Stopping Power 10m (Live)';
+        break;
+      case 'radiant':
+        document.title = 'SteadyAim · Path to Radiant';
+        break;
+      case 'hub':
+        document.title = 'SteadyAim · Drill Hub';
+        break;
+      case 'leaderboard':
+        document.title = 'SteadyAim · Competitive Standings';
+        break;
+      case 'analytics':
+        document.title = 'SteadyAim · Telemetry & Heatmap';
+        break;
+      case 'clip-analyzer':
+        document.title = 'SteadyAim · VOD & Clip Analyzer';
+        break;
+      case 'calibrator':
+        document.title = 'SteadyAim · DPI & Sens Lab';
+        break;
+      default:
+        document.title = 'SteadyAim | Tactical FPS Aim Trainer';
+    }
+  }, [activeTab]);
 
   // Fullscreen state listener
   useEffect(() => {
@@ -182,61 +234,63 @@ export function App() {
 
           {/* Primary View Router */}
           <main className="flex-1 w-full">
-            {activeTab === 'hero' && (
-              <HeroLanding
-                onPlayNow={() => setActiveTab('radiant')}
-                onSelectTab={(tab) => setActiveTab(tab)}
-                currentEdpi={currentEdpi}
-              />
-            )}
-
-            {activeTab === 'radiant' && (
-              <PathToRadiant
-                onLaunchDrill={(drill) => setActiveTab(drill)}
-                currentEdpi={currentEdpi}
-              />
-            )}
-
-            {activeTab === 'leaderboard' && <LeaderboardView />}
-
-            {activeTab === 'hub' && (
-              <div className="max-w-7xl mx-auto p-4 lg:p-8">
-                <DrillHub
-                  settings={settings}
-                  onSelectTab={(tab) => {
-                    if (tab === 'whisper-grip') setActiveTab('whisper');
-                    else if (tab === 'stopping-power') setActiveTab('stopping');
-                    else if (tab === 'tile-frenzy') setActiveTab('tile-frenzy');
-                    else if (tab === 'clip-analyzer') setActiveTab('clip-analyzer');
-                    else if (tab === 'diagnostics') setActiveTab('analytics');
-                    else if (tab === 'benchmark') setActiveTab('calibrator');
-                  }}
-                  openSettings={() => setIsSettingsOpen(true)}
+            <PageWrapper tabKey={activeTab}>
+              {activeTab === 'hero' && (
+                <HeroLanding
+                  onPlayNow={() => setActiveTab('radiant')}
+                  onSelectTab={(tab) => setActiveTab(tab)}
+                  currentEdpi={currentEdpi}
                 />
-              </div>
-            )}
+              )}
 
-            {activeTab === 'analytics' && (
-              <div className="max-w-7xl mx-auto p-4 lg:p-8">
-                <LiveDiagnostics settings={settings} />
-              </div>
-            )}
-
-            {activeTab === 'clip-analyzer' && (
-              <div className="max-w-7xl mx-auto p-4 lg:p-8">
-                <ClipAnalyzer />
-              </div>
-            )}
-
-            {activeTab === 'calibrator' && (
-              <div className="max-w-7xl mx-auto p-4 lg:p-8">
-                <SensBenchmark
-                  settings={settings}
-                  onUpdateSens={handleUpdateSens}
-                  onOpenSettings={() => setIsSettingsOpen(true)}
+              {activeTab === 'radiant' && (
+                <PathToRadiant
+                  onLaunchDrill={(drill) => setActiveTab(drill)}
+                  currentEdpi={currentEdpi}
                 />
-              </div>
-            )}
+              )}
+
+              {activeTab === 'leaderboard' && <LeaderboardView />}
+
+              {activeTab === 'hub' && (
+                <div className="max-w-7xl mx-auto p-4 lg:p-8">
+                  <DrillHub
+                    settings={settings}
+                    onSelectTab={(tab) => {
+                      if (tab === 'whisper-grip') setActiveTab('whisper');
+                      else if (tab === 'stopping-power') setActiveTab('stopping');
+                      else if (tab === 'tile-frenzy') setActiveTab('tile-frenzy');
+                      else if (tab === 'clip-analyzer') setActiveTab('clip-analyzer');
+                      else if (tab === 'diagnostics') setActiveTab('analytics');
+                      else if (tab === 'benchmark') setActiveTab('calibrator');
+                    }}
+                    openSettings={() => setIsSettingsOpen(true)}
+                  />
+                </div>
+              )}
+
+              {activeTab === 'analytics' && (
+                <div className="max-w-7xl mx-auto p-4 lg:p-8">
+                  <LiveDiagnostics settings={settings} />
+                </div>
+              )}
+
+              {activeTab === 'clip-analyzer' && (
+                <div className="max-w-7xl mx-auto p-4 lg:p-8">
+                  <ClipAnalyzer />
+                </div>
+              )}
+
+              {activeTab === 'calibrator' && (
+                <div className="max-w-7xl mx-auto p-4 lg:p-8">
+                  <SensBenchmark
+                    settings={settings}
+                    onUpdateSens={handleUpdateSens}
+                    onOpenSettings={() => setIsSettingsOpen(true)}
+                  />
+                </div>
+              )}
+            </PageWrapper>
           </main>
 
           {/* Persistent Footer */}

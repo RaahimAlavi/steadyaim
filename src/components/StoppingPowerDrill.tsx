@@ -1,8 +1,9 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import gsap from 'gsap';
 import type { UserSettings, DrillResult, TargetShotDetail } from '../types';
 import { FPSEngine } from '../utils/fpsEngine';
 import { MotionTracker } from '../utils/motionAnalytics';
-import { sounds } from '../utils/soundEffects';
+import { audioEngine } from '../utils/audioEngine';
 import { storageEngine } from '../utils/storageEngine';
 import { PauseMenu } from './PauseMenu';
 import { ResultModal } from './ResultModal';
@@ -32,6 +33,7 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fpsEngineRef = useRef<FPSEngine | null>(null);
   const motionTrackerRef = useRef<MotionTracker>(new MotionTracker());
+  const crosshairRef = useRef<HTMLDivElement>(null);
 
   const [isLocked, setIsLocked] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -163,7 +165,7 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
   // Finish round & persist results
   const finishDrill = useCallback(() => {
     setIsPlaying(false);
-    sounds.playSuccess();
+    audioEngine.playSuccess();
 
     if (document.pointerLockElement) {
       document.exitPointerLock();
@@ -291,13 +293,18 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
 
     if (stopBounce) {
       setStopBouncesCount((prev) => prev + 1);
-      sounds.playTensionAlert();
+      audioEngine.playTensionAlert();
 
       setIsBounceAlertActive(true);
       if (bounceTimerRef.current) clearTimeout(bounceTimerRef.current);
       bounceTimerRef.current = window.setTimeout(() => {
         setIsBounceAlertActive(false);
       }, 450);
+    }
+
+    // Dynamic crosshair spring bounce
+    if (crosshairRef.current) {
+      gsap.fromTo(crosshairRef.current, { scale: 1.35 }, { scale: 1.0, duration: 0.1, ease: 'power2.out' });
     }
 
     const { isHit } = fpsEngineRef.current.checkHit();
@@ -327,7 +334,7 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
         spawnNext3DFlickTarget(currentTargetIndex + 1);
       }
     } else {
-      sounds.playMiss();
+      audioEngine.playMiss();
       setMissesCount((prev) => prev + 1);
 
       shotDetailsRef.current.push({
@@ -395,10 +402,15 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
         </div>
       )}
 
+      {/* Dynamic Subtle Vignette during active gameplay */}
+      {isPlaying && !isPaused && (
+        <div className="absolute inset-0 pointer-events-none z-10 bg-radial-[circle_at_center,_transparent_55%,_rgba(4,7,14,0.8)_100%]" />
+      )}
+
       {/* Minimal Green/Cyan Crosshair '+' with Hitmarker Feedback */}
       {isPlaying && !isPaused && (
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
-          <div className="relative w-8 h-8 flex items-center justify-center">
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-20">
+          <div ref={crosshairRef} className="relative w-8 h-8 flex items-center justify-center">
             {/* Center '+' Crosshair */}
             <div className="absolute w-[12px] h-[1.75px] bg-[#00f5d4] shadow-sm" />
             <div className="absolute h-[12px] w-[1.75px] bg-[#00f5d4] shadow-sm" />

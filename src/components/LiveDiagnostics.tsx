@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import type { UserSettings, StrokeAnalysis } from '../types';
 import { MotionTracker } from '../utils/motionAnalytics';
 import { countsToScreenPixels } from '../utils/aimMath';
-import { sounds } from '../utils/soundEffects';
+import { audioEngine } from '../utils/audioEngine';
 import { Activity, Sparkles, RefreshCw, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 
@@ -79,7 +79,7 @@ export const LiveDiagnostics: React.FC<LiveDiagnosticsProps> = ({ settings }) =>
 
       // Play alert if jittery and user is moving
       if (sample.isJittery && sample.speed > 0.3) {
-        sounds.playTensionAlert();
+        audioEngine.playTensionAlert();
       }
 
       // Add to telemetry

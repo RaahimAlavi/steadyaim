@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import gsap from 'gsap';
 import type { DrillResult } from '../types';
 import { Award, RotateCcw, Sliders, X } from 'lucide-react';
-
 
 interface ResultModalProps {
   isOpen: boolean;
@@ -18,6 +18,31 @@ export const ResultModal: React.FC<ResultModalProps> = ({
   onOpenSettings,
   onClose,
 }) => {
+  const modalCardRef = useRef<HTMLDivElement>(null);
+  const gradeBadgeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen && modalCardRef.current) {
+      gsap.fromTo(
+        modalCardRef.current,
+        { scale: 0.92, y: 20, opacity: 0 },
+        { scale: 1, y: 0, opacity: 1, duration: 0.35, ease: 'back.out(1.4)' }
+      );
+      if (gradeBadgeRef.current) {
+        gsap.fromTo(
+          gradeBadgeRef.current,
+          { scale: 0, rotate: -20 },
+          { scale: 1, rotate: 0, duration: 0.5, delay: 0.12, ease: 'elastic.out(1, 0.4)' }
+        );
+      }
+      gsap.fromTo(
+        '.result-stat-card',
+        { y: 15, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.3, stagger: 0.05, delay: 0.18, ease: 'power2.out' }
+      );
+    }
+  }, [isOpen]);
+
   if (!isOpen || !result) return null;
 
   // Compute Grade based on Accuracy and Jitter score
@@ -73,11 +98,12 @@ export const ResultModal: React.FC<ResultModalProps> = ({
       onClick={(e) => e.stopPropagation()} // Prevent accidental dismissals
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200"
     >
-      <div className="w-full max-w-2xl bg-[#0e111a] border border-[#23293c] rounded-3xl shadow-2xl overflow-hidden text-slate-100 flex flex-col">
+      <div ref={modalCardRef} className="w-full max-w-2xl bg-[#0e111a] border border-[#23293c] rounded-3xl shadow-2xl overflow-hidden text-slate-100 flex flex-col">
         {/* Top Header */}
         <div className="relative bg-gradient-to-r from-[#141926] via-[#161a29] to-[#121522] border-b border-[#21273b] p-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div
+              ref={gradeBadgeRef}
               className={`w-14 h-14 rounded-2xl ${gradeBadge.bg} border ${gradeBadge.border} flex items-center justify-center font-black text-2xl ${gradeBadge.color} shadow-lg ${gradeBadge.shadow}`}
             >
               {gradeBadge.grade}
@@ -111,7 +137,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
         <div className="p-6 space-y-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {/* Accuracy */}
-            <div className="bg-[#131622] border border-[#222738] rounded-2xl p-4 text-center">
+            <div className="result-stat-card bg-[#131622] border border-[#222738] rounded-2xl p-4 text-center">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
                 Headshot Accuracy
               </span>
@@ -124,7 +150,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
             </div>
 
             {/* Calmness / Jitter */}
-            <div className="bg-[#131622] border border-[#222738] rounded-2xl p-4 text-center">
+            <div className="result-stat-card bg-[#131622] border border-[#222738] rounded-2xl p-4 text-center">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
                 Calmness Score
               </span>
@@ -141,7 +167,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
             </div>
 
             {/* Time to Confirm */}
-            <div className="bg-[#131622] border border-[#222738] rounded-2xl p-4 text-center">
+            <div className="result-stat-card bg-[#131622] border border-[#222738] rounded-2xl p-4 text-center">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
                 Avg Confirm Time
               </span>
@@ -154,7 +180,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
             </div>
 
             {/* Tension Flags */}
-            <div className="bg-[#131622] border border-[#222738] rounded-2xl p-4 text-center">
+            <div className="result-stat-card bg-[#131622] border border-[#222738] rounded-2xl p-4 text-center">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
                 Tension Spikes
               </span>

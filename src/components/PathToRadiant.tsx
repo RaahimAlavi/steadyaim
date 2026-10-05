@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import {
   Star,
   Skull,
@@ -241,12 +240,10 @@ export const PathToRadiant: React.FC<PathToRadiantProps> = ({
                   </div>
 
                   {/* 3D Hexagonal Pedestal Node (Matte Esports Metal) */}
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                  <button
                     onClick={() => handleNodeClick(node)}
                     onMouseEnter={() => audioEngine.playHover()}
-                    className={`relative w-24 h-24 flex items-center justify-center cursor-pointer transition-all ${
+                    className={`relative w-24 h-24 flex items-center justify-center cursor-pointer transition-transform duration-200 hover:scale-105 active:scale-95 ${
                       isCompleted
                         ? 'text-slate-100'
                         : isCurrent
@@ -281,7 +278,7 @@ export const PathToRadiant: React.FC<PathToRadiantProps> = ({
                         </div>
                       )}
                     </div>
-                  </motion.button>
+                  </button>
 
                   {/* Stage Label Below Pedestal */}
                   <div className="mt-3 text-center">
@@ -332,7 +329,7 @@ export const PathToRadiant: React.FC<PathToRadiantProps> = ({
         {/* My Overall Progress Card */}
         <div className="p-5 rounded-2xl bg-[#0f1424] border border-[#1e273d] shadow-sm">
           <h4 className="text-xs font-mono font-bold tracking-widest text-slate-400 uppercase mb-4">
-            MY OVERALL PROGRESS
+            CHAPTER 1 PROGRESS
           </h4>
 
           {/* Stars Metric */}
@@ -340,33 +337,36 @@ export const PathToRadiant: React.FC<PathToRadiantProps> = ({
             <div className="flex items-center justify-between text-xs mb-1.5">
               <span className="flex items-center gap-1.5 text-slate-300 font-bold">
                 <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                Stars
+                Stars Earned
               </span>
               <span className="font-mono text-slate-300 font-bold">
-                {totalStarsEarned} / 315 <span className="text-slate-500 font-normal">({Math.round((totalStarsEarned / 315) * 100)}%)</span>
+                {totalStarsEarned} / {maxPossibleStars} <span className="text-slate-500 font-normal">({Math.round((totalStarsEarned / maxPossibleStars) * 100)}%)</span>
               </span>
             </div>
             <div className="w-full h-2 rounded-full bg-[#080b12] border border-[#192236] overflow-hidden">
               <div
-                className="h-full bg-amber-400 rounded-full"
-                style={{ width: `${(totalStarsEarned / 315) * 100}%` }}
+                className="h-full bg-amber-400 rounded-full transition-all duration-500"
+                style={{ width: `${(totalStarsEarned / maxPossibleStars) * 100}%` }}
               />
             </div>
           </div>
 
-          {/* Chapters Metric */}
+          {/* Exercises Metric */}
           <div>
             <div className="flex items-center justify-between text-xs mb-1.5">
               <span className="flex items-center gap-1.5 text-slate-300 font-bold">
                 <Shield className="w-4 h-4 text-blue-400" />
-                Chapters
+                Exercises Cleared
               </span>
               <span className="font-mono text-slate-300 font-bold">
-                2 / 15 <span className="text-slate-500 font-normal">(13%)</span>
+                {nodes.filter((n) => n.status === 'completed').length} / {nodes.length} <span className="text-slate-500 font-normal">({Math.round((nodes.filter((n) => n.status === 'completed').length / nodes.length) * 100)}%)</span>
               </span>
             </div>
             <div className="w-full h-2 rounded-full bg-[#080b12] border border-[#192236] overflow-hidden">
-              <div className="h-full bg-blue-500 rounded-full" style={{ width: '13%' }} />
+              <div
+                className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                style={{ width: `${(nodes.filter((n) => n.status === 'completed').length / nodes.length) * 100}%` }}
+              />
             </div>
           </div>
         </div>
@@ -375,10 +375,10 @@ export const PathToRadiant: React.FC<PathToRadiantProps> = ({
         <div className="p-5 rounded-2xl bg-[#0f1424] border border-[#1e273d] shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-mono font-bold tracking-widest text-amber-400 uppercase">
-              LEAGUE DIVISION
+              TACTICAL BENCHMARK
             </span>
             <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-              PROMOTION ZONE
+              ACTIVE
             </span>
           </div>
 
@@ -388,98 +388,87 @@ export const PathToRadiant: React.FC<PathToRadiantProps> = ({
             </div>
             <div>
               <div className="text-lg font-black text-white tracking-tight">
-                Rank <span className="text-blue-400">#13</span>
+                Radiant Path
               </div>
-              <span className="text-xs text-slate-400">Immortal Flight</span>
+              <span className="text-xs text-slate-400">Micro-Glide & Recoil Mastery</span>
             </div>
           </div>
 
           <p className="text-xs text-slate-400 leading-relaxed mb-2">
-            Hold your rank to get promoted to the Radiant Grandmaster bracket on round reset!
+            Clear every stage with 3 stars to unlock the Radiant Grandmaster apex challenge.
           </p>
         </div>
       </div>
 
-      {/* Stage Selection In-Place Card matching Screenshot 1 */}
-      <AnimatePresence>
-        {selectedNode && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ duration: 0.18 }}
-              className="relative w-full max-w-sm rounded-2xl bg-[#141a27] border border-[#26334d] p-5 shadow-2xl text-left overflow-hidden"
+      {/* Stage Selection In-Place Modal Card */}
+      {selectedNode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="relative w-full max-w-sm rounded-2xl bg-[#141a27] border border-[#26334d] p-5 shadow-2xl text-left overflow-hidden">
+            {/* Close Button */}
+            <button
+              onClick={() => setSelectedNode(null)}
+              className="absolute top-4 right-4 z-20 text-slate-400 hover:text-white p-1 rounded-lg bg-black/40 hover:bg-black/60 transition-colors cursor-pointer"
             >
-              {/* Close Button */}
-              <button
-                onClick={() => setSelectedNode(null)}
-                className="absolute top-4 right-4 z-20 text-slate-400 hover:text-white p-1 rounded-lg bg-black/40 hover:bg-black/60 transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <X className="w-4 h-4" />
+            </button>
 
-              {/* 3D Range Preview Thumbnail Header */}
-              <div className="relative w-full h-36 rounded-xl bg-[#090d16] border border-[#1e283d] overflow-hidden mb-4 flex items-center justify-center">
-                {/* Visual Simulation of the 3D Shooting Tunnel */}
-                <div className="absolute inset-0 bg-radial-[circle_at_center,_#162035_0%,_#090d16_80%]" />
-                {/* Simulated Blue Sphere Targets matching Screenshot 2 */}
-                <div className="relative flex items-center justify-center gap-3">
-                  <div className="w-7 h-7 rounded-full bg-blue-600 border border-blue-400 flex items-center justify-center shadow-md">
-                    <div className="w-2 h-2 rounded-full bg-orange-400" />
-                  </div>
-                  <div className="w-8 h-8 rounded-full bg-blue-600 border border-blue-400 flex items-center justify-center shadow-md -translate-y-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-orange-400" />
-                  </div>
-                  <div className="w-7 h-7 rounded-full bg-blue-600 border border-blue-400 flex items-center justify-center shadow-md translate-y-3">
-                    <div className="w-2 h-2 rounded-full bg-orange-400" />
-                  </div>
+            {/* 3D Range Preview Thumbnail Header */}
+            <div className="relative w-full h-36 rounded-xl bg-[#090d16] border border-[#1e283d] overflow-hidden mb-4 flex items-center justify-center">
+              <div className="absolute inset-0 bg-radial-[circle_at_center,_#162035_0%,_#090d16_80%]" />
+              <div className="relative flex items-center justify-center gap-3">
+                <div className="w-7 h-7 rounded-full bg-blue-600 border border-blue-400 flex items-center justify-center shadow-md">
+                  <div className="w-2 h-2 rounded-full bg-orange-400" />
                 </div>
-                {/* Distance Badge */}
-                <span className="absolute bottom-2 left-2 text-[10px] font-mono px-2 py-0.5 rounded bg-black/60 text-slate-300 border border-[#222e47]">
-                  {selectedNode.distance} Range
-                </span>
+                <div className="w-8 h-8 rounded-full bg-blue-600 border border-blue-400 flex items-center justify-center shadow-md -translate-y-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-orange-400" />
+                </div>
+                <div className="w-7 h-7 rounded-full bg-blue-600 border border-blue-400 flex items-center justify-center shadow-md translate-y-3">
+                  <div className="w-2.5 h-2.5 rounded-full bg-orange-400" />
+                </div>
               </div>
+              <span className="absolute bottom-2 left-2 text-[10px] font-mono px-2 py-0.5 rounded bg-black/60 text-slate-300 border border-[#222e47]">
+                {selectedNode.distance} Range
+              </span>
+            </div>
 
-              {/* Category & Title matching Screenshot 1 */}
-              <div className="mb-2">
-                <span className="text-[10px] font-mono font-bold tracking-widest text-slate-400 uppercase">
-                  {selectedNode.category}
-                </span>
-                <h3 className="text-base font-black text-white tracking-wide">
-                  Chapter 1 - Exercise {selectedNode.exerciseNum}
-                </h3>
-              </div>
+            {/* Category & Title */}
+            <div className="mb-2">
+              <span className="text-[10px] font-mono font-bold tracking-widest text-slate-400 uppercase">
+                {selectedNode.category}
+              </span>
+              <h3 className="text-base font-black text-white tracking-wide">
+                Chapter 1 - Exercise {selectedNode.exerciseNum}
+              </h3>
+            </div>
 
-              {/* Description */}
-              <p className="text-xs text-slate-400 leading-relaxed mb-4">
-                {selectedNode.targetDesc}
-              </p>
+            {/* Description */}
+            <p className="text-xs text-slate-400 leading-relaxed mb-4">
+              {selectedNode.targetDesc}
+            </p>
 
-              {/* Completion Banner matching Screenshot 1 */}
-              <div className="w-full py-2 px-3 rounded-lg bg-[#303f9f] text-white text-xs font-bold flex items-center justify-center gap-2 mb-4 shadow-sm">
-                <Check className="w-4 h-4 text-emerald-300" />
-                <span>
-                  {selectedNode.starsEarned === 3
-                    ? 'PERFECT! (3 STARS)'
-                    : selectedNode.starsEarned > 0
-                    ? `${selectedNode.starsEarned} STARS EARNED`
-                    : 'UNLOCKED - READY TO ATTEMPT'}
-                </span>
-              </div>
+            {/* Completion Banner */}
+            <div className="w-full py-2 px-3 rounded-lg bg-[#303f9f] text-white text-xs font-bold flex items-center justify-center gap-2 mb-4 shadow-sm">
+              <Check className="w-4 h-4 text-emerald-300" />
+              <span>
+                {selectedNode.starsEarned === 3
+                  ? 'PERFECT! (3 STARS)'
+                  : selectedNode.starsEarned > 0
+                  ? `${selectedNode.starsEarned} STARS EARNED`
+                  : 'UNLOCKED - READY TO ATTEMPT'}
+              </span>
+            </div>
 
-              {/* Play Button matching Screenshot 1 */}
-              <button
-                onClick={() => handleStartMission(selectedNode)}
-                className="w-full py-3.5 px-6 rounded-xl bg-[#4338ca] hover:bg-[#3730a3] text-white font-extrabold text-sm tracking-wider uppercase transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Play className="w-4 h-4 fill-white" />
-                <span>Play</span>
-              </button>
-            </motion.div>
+            {/* Play Button */}
+            <button
+              onClick={() => handleStartMission(selectedNode)}
+              className="w-full py-3.5 px-6 rounded-xl bg-[#4338ca] hover:bg-[#3730a3] text-white font-extrabold text-sm tracking-wider uppercase transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Play className="w-4 h-4 fill-white" />
+              <span>Play</span>
+            </button>
           </div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 };

@@ -153,31 +153,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
               className={navItemClass(activeTab === 'leaderboard')}
             >
               <Globe className="w-4 h-4 text-blue-400" />
-              <span>Global Aim Rank</span>
+              <span>Global Standings</span>
             </button>
 
             <button
               onClick={() => handleSelect('leaderboard')}
               onMouseEnter={() => audioEngine.playHover()}
-              className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-[#0f1422] transition-colors cursor-pointer"
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-[#0f1422] transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-3">
                 <Calendar className="w-4 h-4 text-emerald-400" />
-                <span>Daily Challenge</span>
+                <span>Daily Practice</span>
               </div>
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300">
+                ACTIVE
+              </span>
             </button>
 
             <button
               onClick={() => handleSelect('leaderboard')}
               onMouseEnter={() => audioEngine.playHover()}
-              className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-[#0f1422] transition-colors cursor-pointer"
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-[#0f1422] transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-3">
                 <Trophy className="w-4 h-4 text-amber-400" />
-                <span>League Flight</span>
+                <span>Tier Bracket</span>
               </div>
-              <span className="text-[10px] font-mono text-blue-400 font-bold">#13</span>
+              <span className="text-[10px] font-mono text-amber-300 font-bold">IMMORTAL</span>
             </button>
           </div>
         </div>

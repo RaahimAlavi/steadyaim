@@ -164,6 +164,16 @@ export const LeaderboardView: React.FC = () => {
                     <span className={player.isCurrentUser ? 'text-blue-300 font-extrabold' : ''}>
                       {player.username}
                     </span>
+                    {player.isCurrentUser && (
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40">
+                        YOU
+                      </span>
+                    )}
+                    {player.isPreset && (
+                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#131926] text-slate-400 border border-[#222c42]">
+                        BENCHMARK
+                      </span>
+                    )}
                   </td>
 
                   <td className="py-3.5 px-4">

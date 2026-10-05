@@ -33,19 +33,20 @@ export interface LeaderboardEntry {
   accuracy: number;
   stars: number;
   isCurrentUser?: boolean;
+  isPreset?: boolean;
 }
 
 const DEFAULT_PROFILE: UserProfile = {
   id: 'guest_user_1',
-  username: 'ViperAim_99',
+  username: 'AimMaster',
   email: 'player@steadyaim.gg',
   isLoggedIn: false,
   rankName: 'Immortal Flight',
   globalRank: 13,
   leagueRank: 13,
   totalStars: 8,
-  chaptersCompleted: 2,
-  sessionsCount: 14,
+  chaptersCompleted: 1,
+  sessionsCount: 3,
   avatarSeed: 'viper',
 };
 
@@ -85,22 +86,21 @@ const DEFAULT_SESSIONS: SessionRecord[] = [
   },
 ];
 
-const LEADERBOARD_PRESETS: LeaderboardEntry[] = [
-  { rank: 1, username: 'TenZ_Official', country: 'CA', tier: 'Radiant', score: 6420, accuracy: 98.8, stars: 21 },
-  { rank: 2, username: 'Chronicle_Aim', country: 'EU', tier: 'Radiant', score: 6280, accuracy: 98.1, stars: 21 },
-  { rank: 3, username: 'Demon1_FPS', country: 'US', tier: 'Radiant', score: 6150, accuracy: 97.6, stars: 21 },
-  { rank: 4, username: 'Aspas_Duelist', country: 'BR', tier: 'Radiant', score: 5980, accuracy: 96.9, stars: 20 },
-  { rank: 5, username: 'Derke_Entry', country: 'FI', tier: 'Radiant', score: 5890, accuracy: 96.4, stars: 20 },
-  { rank: 6, username: 'Something_PRX', country: 'JP', tier: 'Immortal', score: 5740, accuracy: 95.8, stars: 19 },
-  { rank: 7, username: 'Cryocells_100T', country: 'US', tier: 'Immortal', score: 5610, accuracy: 95.2, stars: 19 },
-  { rank: 8, username: 'Boaster_IGL', country: 'UK', tier: 'Immortal', score: 5490, accuracy: 94.7, stars: 18 },
-  { rank: 9, username: 'Kangkang_EDG', country: 'CN', tier: 'Immortal', score: 5380, accuracy: 94.3, stars: 18 },
-  { rank: 10, username: 'ScreaM_Edshot', country: 'BE', tier: 'Immortal', score: 5250, accuracy: 93.9, stars: 17 },
-  { rank: 11, username: 'Shroud_Sub', country: 'US', tier: 'Immortal', score: 5120, accuracy: 93.4, stars: 17 },
-  { rank: 12, username: 'cNed_OP', country: 'TR', tier: 'Immortal', score: 4980, accuracy: 92.8, stars: 16 },
-  { rank: 13, username: 'ViperAim_99 (You)', country: 'US', tier: 'Immortal', score: 4850, accuracy: 92.4, stars: 15, isCurrentUser: true },
-  { rank: 14, username: 'FNS_Mastermind', country: 'US', tier: 'Ascendant', score: 4720, accuracy: 91.5, stars: 14 },
-  { rank: 15, username: 'Zellsis_Vibe', country: 'US', tier: 'Ascendant', score: 4610, accuracy: 90.9, stars: 14 },
+const PRESET_PLAYERS: Omit<LeaderboardEntry, 'rank'>[] = [
+  { username: 'TenZ_Official', country: 'CA', tier: 'Radiant', score: 6420, accuracy: 98.8, stars: 15, isPreset: true },
+  { username: 'Chronicle_Aim', country: 'EU', tier: 'Radiant', score: 6280, accuracy: 98.1, stars: 15, isPreset: true },
+  { username: 'Demon1_FPS', country: 'US', tier: 'Radiant', score: 6150, accuracy: 97.6, stars: 15, isPreset: true },
+  { username: 'Aspas_Duelist', country: 'BR', tier: 'Radiant', score: 5980, accuracy: 96.9, stars: 14, isPreset: true },
+  { username: 'Derke_Entry', country: 'FI', tier: 'Radiant', score: 5890, accuracy: 96.4, stars: 14, isPreset: true },
+  { username: 'Something_PRX', country: 'JP', tier: 'Immortal', score: 5740, accuracy: 95.8, stars: 13, isPreset: true },
+  { username: 'Cryocells_100T', country: 'US', tier: 'Immortal', score: 5610, accuracy: 95.2, stars: 13, isPreset: true },
+  { username: 'Boaster_IGL', country: 'UK', tier: 'Immortal', score: 5490, accuracy: 94.7, stars: 12, isPreset: true },
+  { username: 'Kangkang_EDG', country: 'CN', tier: 'Immortal', score: 5380, accuracy: 94.3, stars: 12, isPreset: true },
+  { username: 'ScreaM_Edshot', country: 'BE', tier: 'Immortal', score: 5250, accuracy: 93.9, stars: 11, isPreset: true },
+  { username: 'Shroud_Sub', country: 'US', tier: 'Immortal', score: 5120, accuracy: 93.4, stars: 11, isPreset: true },
+  { username: 'cNed_OP', country: 'TR', tier: 'Immortal', score: 4980, accuracy: 92.8, stars: 10, isPreset: true },
+  { username: 'FNS_Mastermind', country: 'US', tier: 'Ascendant', score: 4720, accuracy: 91.5, stars: 9, isPreset: true },
+  { username: 'Zellsis_Vibe', country: 'US', tier: 'Ascendant', score: 4610, accuracy: 90.9, stars: 9, isPreset: true },
 ];
 
 class StorageEngine {
@@ -111,7 +111,17 @@ class StorageEngine {
   public getProfile(): UserProfile {
     try {
       const saved = localStorage.getItem(this.profileKey);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const sessions = this.getSessions();
+        const totalStars = this.getTotalStars();
+        return {
+          ...DEFAULT_PROFILE,
+          ...parsed,
+          sessionsCount: sessions.length,
+          totalStars,
+        };
+      }
     } catch {
       // fallback
     }
@@ -142,12 +152,21 @@ class StorageEngine {
     sessions.unshift(newSession);
     localStorage.setItem(this.sessionsKey, JSON.stringify(sessions));
 
-    // Update profile
+    // Update profile session count
     const profile = this.getProfile();
-    profile.sessionsCount += 1;
+    profile.sessionsCount = sessions.length;
     this.saveProfile(profile);
 
     return newSession;
+  }
+
+  public getTotalStars(): number {
+    try {
+      const map = JSON.parse(localStorage.getItem(this.nodeStarsKey) || '{}');
+      return [1, 2, 3, 4, 5].reduce((sum, id) => sum + (typeof map[id] === 'number' ? map[id] : id <= 3 ? [3, 3, 2][id - 1] : 0), 0);
+    } catch {
+      return 8;
+    }
   }
 
   public getNodeStars(nodeId: number): number {
@@ -157,7 +176,7 @@ class StorageEngine {
     } catch {
       // fallback
     }
-    // Defaults matching 3D Aim Trainer screenshot
+    // Realistic initial defaults for nodes 1-3
     if (nodeId === 1) return 3;
     if (nodeId === 2) return 3;
     if (nodeId === 3) return 2;
@@ -171,10 +190,8 @@ class StorageEngine {
         map[nodeId] = stars;
         localStorage.setItem(this.nodeStarsKey, JSON.stringify(map));
 
-        // Update overall profile total stars
-        const total = Object.values(map).reduce((a: number, b) => a + (Number(b) || 0), 0);
         const profile = this.getProfile();
-        profile.totalStars = total;
+        profile.totalStars = this.getTotalStars();
         this.saveProfile(profile);
       }
     } catch {
@@ -183,20 +200,53 @@ class StorageEngine {
   }
 
   public getLeaderboard(type: 'global' | 'daily' | 'league'): LeaderboardEntry[] {
+    const sessions = this.getSessions();
+    const profile = this.getProfile();
+    const totalStars = this.getTotalStars();
+
+    const bestScore = sessions.length > 0 ? Math.max(...sessions.map((s) => s.score)) : 3450;
+    const avgAccuracy = sessions.length > 0
+      ? Number((sessions.reduce((acc, s) => acc + s.accuracy, 0) / sessions.length).toFixed(1))
+      : 92.4;
+
+    const userTier: LeaderboardEntry['tier'] =
+      bestScore >= 6000 ? 'Radiant' : bestScore >= 5000 ? 'Immortal' : bestScore >= 4000 ? 'Ascendant' : 'Diamond';
+
+    // Assemble current user's genuine record
+    const userEntry: Omit<LeaderboardEntry, 'rank'> = {
+      username: `${profile.username} (You)`,
+      country: 'LOCAL',
+      tier: userTier,
+      score: bestScore,
+      accuracy: avgAccuracy,
+      stars: totalStars,
+      isCurrentUser: true,
+      isPreset: false,
+    };
+
+    // Combine preset benchmarks and real user, sort descending by score
+    const all = [...PRESET_PLAYERS, userEntry];
+
     if (type === 'daily') {
-      return LEADERBOARD_PRESETS.map((p, idx) => ({
-        ...p,
-        rank: idx + 1,
-        score: Math.round(p.score * 0.88),
-      }));
+      return all
+        .map((p) => ({
+          ...p,
+          score: Math.round(p.score * 0.88),
+        }))
+        .sort((a, b) => b.score - a.score)
+        .map((p, idx) => ({ ...p, rank: idx + 1 }));
     }
+
     if (type === 'league') {
-      return LEADERBOARD_PRESETS.slice(5, 15).map((p, idx) => ({
-        ...p,
-        rank: idx + 10,
-      }));
+      return all
+        .slice(4, 15)
+        .sort((a, b) => b.score - a.score)
+        .map((p, idx) => ({ ...p, rank: idx + 1 }));
     }
-    return LEADERBOARD_PRESETS;
+
+    return all
+      .sort((a, b) => b.score - a.score)
+      .map((p, idx) => ({ ...p, rank: idx + 1 }));
   }
 }
 
