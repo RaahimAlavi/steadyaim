@@ -59,7 +59,7 @@ export interface TargetShotDetail {
 
 export interface DrillResult {
   id: string;
-  drillType: 'whisper-grip' | 'stopping-power' | 'target-confirmation';
+  drillType: 'whisper-grip' | 'stopping-power' | 'tile-frenzy' | 'target-confirmation';
   timestamp: number;
   totalTargets: number;
   hits: number;

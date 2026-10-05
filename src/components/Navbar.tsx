@@ -1,14 +1,23 @@
 import React from 'react';
 import type { UserSettings } from '../types';
-
 import { calculateEDPI, calculateCm360 } from '../utils/aimMath';
-import { Activity, Target, ShieldAlert, Sliders, Volume2, VolumeX, MousePointer2, Video } from 'lucide-react';
-
+import {
+  Activity,
+  Target,
+  ShieldAlert,
+  Sliders,
+  Volume2,
+  VolumeX,
+  MousePointer2,
+  Video,
+  Zap,
+  LayoutGrid,
+} from 'lucide-react';
 
 interface NavbarProps {
   settings: UserSettings;
-  activeTab: 'diagnostics' | 'whisper-grip' | 'stopping-power' | 'clip-analyzer' | 'benchmark';
-  setActiveTab: (tab: 'diagnostics' | 'whisper-grip' | 'stopping-power' | 'clip-analyzer' | 'benchmark') => void;
+  activeTab: 'hub' | 'diagnostics' | 'whisper-grip' | 'stopping-power' | 'tile-frenzy' | 'clip-analyzer' | 'benchmark';
+  setActiveTab: (tab: 'hub' | 'diagnostics' | 'whisper-grip' | 'stopping-power' | 'tile-frenzy' | 'clip-analyzer' | 'benchmark') => void;
   openSettings: () => void;
   toggleSound: () => void;
 }
@@ -24,11 +33,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   const cm360 = calculateCm360(settings.dpi, settings.sensitivity);
 
   return (
-    <header className="w-full bg-[#0b0e17] border-b border-[#1c2336] px-4 lg:px-8 py-3 sticky top-0 z-50 backdrop-blur-md">
-      <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+    <header className="w-full bg-[#090c14] border-b border-[#1c2336] px-4 lg:px-8 py-2.5 sticky top-0 z-50 backdrop-blur-md">
+      <div className="max-w-[1440px] mx-auto flex flex-col xl:flex-row items-center justify-between gap-3">
         {/* Brand */}
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#ff4655] to-[#ff7582] flex items-center justify-center shadow-lg shadow-[#ff4655]/30">
+        <div
+          onClick={() => setActiveTab('hub')}
+          className="flex items-center gap-3 cursor-pointer group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#ff4655] to-[#ff7582] flex items-center justify-center shadow-lg shadow-[#ff4655]/30 group-hover:scale-105 transition-transform">
             <MousePointer2 className="w-4 h-4 text-white" />
           </div>
           <div>
@@ -38,51 +50,75 @@ export const Navbar: React.FC<NavbarProps> = ({
                 PRO
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">Tactical FPS Aim & Gunfight Diagnostics</p>
+            <p className="text-[11px] text-slate-400">Esports Tactical Aim & Gunfight Diagnostics</p>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <nav className="flex items-center bg-[#101422] p-1 rounded-2xl border border-[#20273c] shadow-inner gap-1">
+        {/* Navigation Tabs (3D Aim Trainer style organized buttons) */}
+        <nav className="flex items-center bg-[#101422] p-1 rounded-2xl border border-[#20273c] shadow-inner gap-1 overflow-x-auto max-w-full">
+          <button
+            onClick={() => setActiveTab('hub')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+              activeTab === 'hub'
+                ? 'bg-[#ff4655] text-white shadow-lg shadow-[#ff4655]/30'
+                : 'text-slate-400 hover:text-white hover:bg-[#181f33]'
+            }`}
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
+            <span>Drill Hub</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('whisper-grip')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
               activeTab === 'whisper-grip'
                 ? 'bg-[#ff4655] text-white shadow-lg shadow-[#ff4655]/30'
                 : 'text-slate-400 hover:text-white hover:bg-[#181f33]'
             }`}
           >
             <Target className="w-3.5 h-3.5" />
-            <span>3D Whisper Grip</span>
+            <span>Whisper Grip</span>
           </button>
 
           <button
             onClick={() => setActiveTab('stopping-power')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
               activeTab === 'stopping-power'
                 ? 'bg-[#ff4655] text-white shadow-lg shadow-[#ff4655]/30'
                 : 'text-slate-400 hover:text-white hover:bg-[#181f33]'
             }`}
           >
             <ShieldAlert className="w-3.5 h-3.5" />
-            <span>3D Stopping Power</span>
+            <span>Stopping Power</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('tile-frenzy')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+              activeTab === 'tile-frenzy'
+                ? 'bg-[#ff4655] text-white shadow-lg shadow-[#ff4655]/30'
+                : 'text-slate-400 hover:text-white hover:bg-[#181f33]'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 text-[#ffb703]" />
+            <span>Tile Frenzy</span>
           </button>
 
           <button
             onClick={() => setActiveTab('clip-analyzer')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
               activeTab === 'clip-analyzer'
                 ? 'bg-[#ff4655] text-white shadow-lg shadow-[#ff4655]/30'
                 : 'text-slate-400 hover:text-white hover:bg-[#181f33]'
             }`}
           >
             <Video className="w-3.5 h-3.5 text-[#00f5d4]" />
-            <span>Gunfight Clip VOD</span>
+            <span>VOD Analyzer</span>
           </button>
 
           <button
             onClick={() => setActiveTab('diagnostics')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
               activeTab === 'diagnostics'
                 ? 'bg-[#ff4655] text-white shadow-lg shadow-[#ff4655]/30'
                 : 'text-slate-400 hover:text-white hover:bg-[#181f33]'
@@ -94,18 +130,16 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             onClick={() => setActiveTab('benchmark')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
               activeTab === 'benchmark'
                 ? 'bg-[#ff4655] text-white shadow-lg shadow-[#ff4655]/30'
                 : 'text-slate-400 hover:text-white hover:bg-[#181f33]'
             }`}
           >
             <Sliders className="w-3.5 h-3.5" />
-            <span>Sens & Hardware Lab</span>
+            <span>Sens & Hardware</span>
           </button>
         </nav>
-
-
 
         {/* Quick Info & Action Badges */}
         <div className="flex items-center gap-3">

@@ -86,7 +86,11 @@ export const ResultModal: React.FC<ResultModalProps> = ({
               <div className="flex items-center gap-2">
                 <h2 className="text-xl font-black text-white tracking-wide">PERFORMANCE REPORT</h2>
                 <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-[#ff4655]/20 text-[#ff4655] border border-[#ff4655]/30">
-                  {result.drillType === 'whisper-grip' ? 'WHISPER GRIP' : 'STOPPING POWER'}
+                  {result.drillType === 'whisper-grip'
+                    ? 'WHISPER GRIP'
+                    : result.drillType === 'tile-frenzy'
+                    ? 'TILE FRENZY (30S)'
+                    : 'STOPPING POWER'}
                 </span>
               </div>
               <p className={`text-xs font-semibold ${gradeBadge.color}`}>

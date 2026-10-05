@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import type { UserSettings } from './types';
 import { Navbar } from './components/Navbar';
+import { DrillHub } from './components/DrillHub';
 import { LiveDiagnostics } from './components/LiveDiagnostics';
 import { WhisperGripDrill } from './components/WhisperGripDrill';
 import { StoppingPowerDrill } from './components/StoppingPowerDrill';
+import { TileFrenzyDrill } from './components/TileFrenzyDrill';
 import { SensBenchmark } from './components/SensBenchmark';
 import { ClipAnalyzer } from './components/ClipAnalyzer';
 import { SettingsModal } from './components/SettingsModal';
 import { sounds } from './utils/soundEffects';
 import { Crosshair, Shield } from 'lucide-react';
-
 
 export function App() {
   const [settings, setSettings] = useState<UserSettings>(() => {
@@ -37,7 +38,9 @@ export function App() {
     };
   });
 
-  const [activeTab, setActiveTab] = useState<'diagnostics' | 'whisper-grip' | 'stopping-power' | 'clip-analyzer' | 'benchmark'>('whisper-grip');
+  const [activeTab, setActiveTab] = useState<
+    'hub' | 'diagnostics' | 'whisper-grip' | 'stopping-power' | 'tile-frenzy' | 'clip-analyzer' | 'benchmark'
+  >('hub');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Sync sound setting
@@ -55,8 +58,8 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#090b11] text-slate-100 flex flex-col font-sans selection:bg-[#ff4655] selection:text-white">
-      {/* Top Navbar */}
+    <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col font-sans selection:bg-[#ff4655] selection:text-white">
+      {/* Top Esports Navbar */}
       <Navbar
         settings={settings}
         activeTab={activeTab}
@@ -67,11 +70,21 @@ export function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8">
+        {activeTab === 'hub' && (
+          <DrillHub
+            settings={settings}
+            onSelectTab={(tab) => setActiveTab(tab)}
+            openSettings={() => setIsSettingsOpen(true)}
+          />
+        )}
         {activeTab === 'whisper-grip' && (
           <WhisperGripDrill settings={settings} onOpenSettings={() => setIsSettingsOpen(true)} />
         )}
         {activeTab === 'stopping-power' && (
           <StoppingPowerDrill settings={settings} onOpenSettings={() => setIsSettingsOpen(true)} />
+        )}
+        {activeTab === 'tile-frenzy' && (
+          <TileFrenzyDrill settings={settings} onOpenSettings={() => setIsSettingsOpen(true)} />
         )}
         {activeTab === 'clip-analyzer' && <ClipAnalyzer />}
         {activeTab === 'diagnostics' && <LiveDiagnostics settings={settings} />}
@@ -85,12 +98,12 @@ export function App() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full bg-[#0c0e16] border-t border-[#1d2232] py-6 px-4 lg:px-8 mt-12 text-xs text-slate-500">
+      <footer className="w-full bg-[#0a0c14] border-t border-[#1a2030] py-6 px-4 lg:px-8 mt-12 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#00f5d4]" />
-            <span className="font-semibold text-slate-300">STEADYAIM</span>
-            <span>- Built for Calm Gunfight Execution in Valorant & Tactical FPS</span>
+            <span className="font-semibold text-slate-300">STEADYAIM PRO</span>
+            <span>: Calm Gunfight Execution Suite for Valorant & Tactical FPS</span>
           </div>
 
           <div className="flex items-center gap-6 text-[11px]">
