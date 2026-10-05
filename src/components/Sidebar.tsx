@@ -43,6 +43,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const handleSelect = (tab: NavTab) => {
     audioEngine.playClick();
+    if (tab === 'tile-frenzy' || tab === 'whisper' || tab === 'stopping') {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    }
     onSelectTab(tab);
     if (onCloseMobile) onCloseMobile();
   };

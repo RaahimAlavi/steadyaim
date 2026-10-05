@@ -12,18 +12,21 @@ import {
   Star,
   ShieldAlert,
   AlertTriangle,
+  Crosshair,
 } from 'lucide-react';
 
 interface StoppingPowerDrillProps {
   settings: UserSettings;
   onOpenSettings: () => void;
   onExitDrill?: () => void;
+  autoStart?: boolean;
 }
 
 export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
   settings,
   onOpenSettings,
   onExitDrill,
+  autoStart = false,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -33,7 +36,6 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
   const [isLocked, setIsLocked] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);
   const [hitmarkerActive, setHitmarkerActive] = useState(false);
 
@@ -74,10 +76,19 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
     };
   }, []);
 
+  // Auto-start drill when requested from stage selection
+  useEffect(() => {
+    if (autoStart) {
+      const timer = window.setTimeout(() => {
+        startDrill();
+      }, 100);
+      return () => window.clearTimeout(timer);
+    }
+  }, [autoStart]);
+
   // Fullscreen change listener
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement));
       setTimeout(() => {
         fpsEngineRef.current?.resize();
       }, 60);
@@ -365,11 +376,7 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full flex flex-col justify-between bg-[#080b12] text-white select-none ${
-        isFullscreen
-          ? 'h-screen p-0 m-0 fixed inset-0 z-50'
-          : 'h-[620px] rounded-3xl border border-[#1e263d] overflow-hidden'
-      }`}
+      className="relative w-full h-full flex flex-col justify-between bg-[#080b12] text-white select-none overflow-hidden"
     >
       {/* 3D WebGL Canvas */}
       <canvas
@@ -462,6 +469,36 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
         </div>
       )}
 
+      {/* Click to Lock Aim Prompt when round is active but pointer lock needs engagement */}
+      {isPlaying && !isLocked && !isPaused && (
+        <div
+          onClick={() => {
+            if (!document.fullscreenElement) {
+              document.documentElement.requestFullscreen().catch(() => {});
+            }
+            requestLock();
+          }}
+          className="absolute inset-0 bg-black/45 backdrop-blur-[2px] flex flex-col items-center justify-center cursor-pointer z-30"
+        >
+          <div className="flex flex-col items-center gap-3 p-6 rounded-2xl bg-[#0e1320]/95 border border-blue-500/30 shadow-2xl max-w-sm text-center">
+            <div className="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
+              <Crosshair className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <h4 className="text-base font-black text-white tracking-wider uppercase">
+                CLICK TO LOCK AIM & START
+              </h4>
+              <p className="text-xs text-slate-400 mt-1">
+                Press [ESC] at any time to pause or adjust settings
+              </p>
+            </div>
+            <div className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold tracking-widest uppercase transition-all shadow-md mt-1">
+              ENGAGE [LEFT CLICK]
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Pre-Drill Start Overlay */}
       {!isPlaying && !showResultModal && (
         <div
@@ -497,6 +534,9 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
           onExit={() => {
             setIsPlaying(false);
             setIsPaused(false);
+            if (document.fullscreenElement) {
+              document.exitFullscreen().catch(() => {});
+            }
             if (onExitDrill) onExitDrill();
           }}
         />
@@ -510,6 +550,9 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
         onOpenSettings={onOpenSettings}
         onClose={() => {
           setShowResultModal(false);
+          if (document.fullscreenElement) {
+            document.exitFullscreen().catch(() => {});
+          }
           if (onExitDrill) onExitDrill();
         }}
       />

@@ -81,6 +81,68 @@ export function App() {
 
   const currentEdpi = calculateEDPI(settings.dpi, settings.sensitivity);
 
+  const isDrillActive =
+    activeTab === 'tile-frenzy' ||
+    activeTab === 'whisper' ||
+    activeTab === 'stopping';
+
+  // Dedicated Full-Screen Viewport for Tactical Aiming Drills (No Sidebar, No Navbar, No Void)
+  if (isDrillActive) {
+    return (
+      <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-[#07090e] select-none z-50">
+        {activeTab === 'tile-frenzy' && (
+          <TileFrenzyDrill
+            settings={settings}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+            onExitDrill={() => {
+              if (document.fullscreenElement) {
+                document.exitFullscreen().catch(() => {});
+              }
+              setActiveTab('radiant');
+            }}
+            autoStart={true}
+          />
+        )}
+
+        {activeTab === 'whisper' && (
+          <WhisperGripDrill
+            settings={settings}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+            onExitDrill={() => {
+              if (document.fullscreenElement) {
+                document.exitFullscreen().catch(() => {});
+              }
+              setActiveTab('radiant');
+            }}
+            autoStart={true}
+          />
+        )}
+
+        {activeTab === 'stopping' && (
+          <StoppingPowerDrill
+            settings={settings}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+            onExitDrill={() => {
+              if (document.fullscreenElement) {
+                document.exitFullscreen().catch(() => {});
+              }
+              setActiveTab('radiant');
+            }}
+            autoStart={true}
+          />
+        )}
+
+        {/* Settings Modal accessible from in-game pause menu */}
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          settings={settings}
+          onSave={(newSettings) => setSettings(newSettings)}
+        />
+      </div>
+    );
+  }
+
   return (
     <ClickSpark sparkColor="#3b82f6" sparkSize={8} sparkRadius={18} sparkCount={7} duration={300}>
       <div className="min-h-screen bg-[#07090e] text-slate-100 flex overflow-hidden font-sans selection:bg-blue-600 selection:text-white select-none">
@@ -150,36 +212,6 @@ export function App() {
                     else if (tab === 'benchmark') setActiveTab('calibrator');
                   }}
                   openSettings={() => setIsSettingsOpen(true)}
-                />
-              </div>
-            )}
-
-            {activeTab === 'tile-frenzy' && (
-              <div className="max-w-7xl mx-auto p-4 lg:p-8">
-                <TileFrenzyDrill
-                  settings={settings}
-                  onOpenSettings={() => setIsSettingsOpen(true)}
-                  onExitDrill={() => setActiveTab('radiant')}
-                />
-              </div>
-            )}
-
-            {activeTab === 'whisper' && (
-              <div className="max-w-7xl mx-auto p-4 lg:p-8">
-                <WhisperGripDrill
-                  settings={settings}
-                  onOpenSettings={() => setIsSettingsOpen(true)}
-                  onExitDrill={() => setActiveTab('radiant')}
-                />
-              </div>
-            )}
-
-            {activeTab === 'stopping' && (
-              <div className="max-w-7xl mx-auto p-4 lg:p-8">
-                <StoppingPowerDrill
-                  settings={settings}
-                  onOpenSettings={() => setIsSettingsOpen(true)}
-                  onExitDrill={() => setActiveTab('radiant')}
                 />
               </div>
             )}

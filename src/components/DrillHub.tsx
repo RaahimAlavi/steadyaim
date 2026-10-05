@@ -233,7 +233,14 @@ export const DrillHub: React.FC<DrillHubProps> = ({
           return (
             <div
               key={drill.id}
-              onClick={() => onSelectTab(drill.id)}
+              onClick={() => {
+                if (drill.id === 'tile-frenzy' || drill.id === 'whisper-grip' || drill.id === 'stopping-power') {
+                  if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(() => {});
+                  }
+                }
+                onSelectTab(drill.id);
+              }}
               className={`group relative bg-[#0e121d] border border-[#21293c] rounded-3xl p-6 transition-all duration-200 cursor-pointer shadow-xl flex flex-col justify-between ${drill.accentGlow}`}
             >
               <div>
