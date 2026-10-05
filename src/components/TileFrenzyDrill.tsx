@@ -14,6 +14,7 @@ interface TileFrenzyDrillProps {
   onOpenSettings: () => void;
   onExitDrill?: () => void;
   autoStart?: boolean;
+  nodeId?: number;
 }
 
 export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
@@ -21,6 +22,7 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
   onOpenSettings,
   onExitDrill,
   autoStart = false,
+  nodeId = 3,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -220,7 +222,7 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
     else if (hitsCount >= 22) grade = 'B';
     else grade = 'C';
 
-    const starsEarned = score >= 3500 ? 3 : score >= 2500 ? 2 : score >= 1500 ? 1 : 0;
+    const starsEarned = score >= 3200 ? 3 : score >= 2200 ? 2 : score >= 1000 ? 1 : 0;
 
     // Save session to local database
     storageEngine.recordSession({
@@ -233,8 +235,8 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
       jitterVariancePx: Number(((100 - avgJitter) * 0.05).toFixed(1)),
     });
 
-    // Save earned stars to node 3
-    storageEngine.saveNodeStars(3, starsEarned);
+    // Save earned stars to specified campaign node
+    storageEngine.saveNodeStars(nodeId ?? 3, starsEarned);
 
     const result: DrillResult = {
       id: `tile-frenzy-${Date.now()}`,
@@ -249,6 +251,7 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
       avgTimeToConfirmMs: avgReaction,
       avgDecelerationScore: Math.round(avgJitter * 0.94),
       grade,
+      starsEarned,
       shots,
     };
 
@@ -474,13 +477,13 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
   }, [isLocked, handleFire, requestLock]);
 
   // Live Star Calculation (1 Star: 1,500, 2 Stars: 2,500, 3 Stars: 3,500)
-  const currentStars = score >= 3500 ? 3 : score >= 2500 ? 2 : score >= 1500 ? 1 : 0;
-  const starProgressPercent = Math.min(100, Math.round((score / 3500) * 100));
+  const currentStars = score >= 3200 ? 3 : score >= 2200 ? 2 : score >= 1000 ? 1 : 0;
+  const starProgressPercent = Math.min(100, Math.round((score / 3200) * 100));
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full flex flex-col justify-between bg-[#080b12] text-white select-none overflow-hidden"
+      className="relative w-full h-full flex flex-col justify-between bg-[#0a0e1a] text-white select-none overflow-hidden"
     >
       {/* 3D WebGL Canvas */}
       <canvas
@@ -489,9 +492,9 @@ export const TileFrenzyDrill: React.FC<TileFrenzyDrillProps> = ({
         className="w-full h-full cursor-none block absolute inset-0 z-0"
       />
 
-      {/* Dynamic Deep Eye-Friendly Vignette during active gameplay */}
+      {/* Subtle Tactical Vignette during active gameplay */}
       {isPlaying && !isPaused && (
-        <div className="absolute inset-0 pointer-events-none z-10 bg-radial-[circle_at_center,_transparent_35%,_rgba(3,5,10,0.92)_100%]" />
+        <div className="absolute inset-0 pointer-events-none z-10 bg-radial-[circle_at_center,_transparent_65%,_rgba(6,9,18,0.35)_100%]" />
       )}
 
       {/* Minimal Tactical Crosshair '+' with Hitmarker Feedback */}

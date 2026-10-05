@@ -62,7 +62,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="w-full bg-[#080b12]/95 border-b border-[#182033] px-4 lg:px-6 py-2.5 sticky top-0 z-30 backdrop-blur-md select-none">
+    <header className="w-full bg-[#0d121f]/95 border-b border-[#1e283d] px-4 lg:px-6 py-2.5 sticky top-0 z-30 backdrop-blur-md select-none">
       <div className="w-full flex items-center justify-between gap-3">
         {/* Left: Mobile Sidebar Toggle + Mode Navigation Pills */}
         <div className="flex items-center gap-3">

@@ -70,5 +70,6 @@ export interface DrillResult {
   avgTimeToConfirmMs: number;
   avgDecelerationScore: number;
   grade: 'S' | 'A' | 'B' | 'C' | 'D';
+  starsEarned?: number;
   shots: TargetShotDetail[];
 }

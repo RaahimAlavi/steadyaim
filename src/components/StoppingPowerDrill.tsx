@@ -21,6 +21,7 @@ interface StoppingPowerDrillProps {
   onOpenSettings: () => void;
   onExitDrill?: () => void;
   autoStart?: boolean;
+  nodeId?: number;
 }
 
 export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
@@ -28,6 +29,7 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
   onOpenSettings,
   onExitDrill,
   autoStart = false,
+  nodeId = 2,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -204,8 +206,8 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
       jitterVariancePx: Number(((100 - avgDecel) * 0.05).toFixed(1)),
     });
 
-    // Save stars to node 2
-    storageEngine.saveNodeStars(2, starsEarned);
+    // Save stars to specified campaign node
+    storageEngine.saveNodeStars(nodeId ?? 2, starsEarned);
 
     const result: DrillResult = {
       id: `stopping-${Date.now()}`,
@@ -220,6 +222,7 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
       avgTimeToConfirmMs: avgReaction,
       avgDecelerationScore: avgDecel,
       grade,
+      starsEarned,
       shots,
     };
 
@@ -383,7 +386,7 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full flex flex-col justify-between bg-[#080b12] text-white select-none overflow-hidden"
+      className="relative w-full h-full flex flex-col justify-between bg-[#0a0e1a] text-white select-none overflow-hidden"
     >
       {/* 3D WebGL Canvas */}
       <canvas
@@ -402,9 +405,9 @@ export const StoppingPowerDrill: React.FC<StoppingPowerDrillProps> = ({
         </div>
       )}
 
-      {/* Dynamic Deep Eye-Friendly Vignette during active gameplay */}
+      {/* Subtle Tactical Vignette during active gameplay */}
       {isPlaying && !isPaused && (
-        <div className="absolute inset-0 pointer-events-none z-10 bg-radial-[circle_at_center,_transparent_35%,_rgba(3,5,10,0.92)_100%]" />
+        <div className="absolute inset-0 pointer-events-none z-10 bg-radial-[circle_at_center,_transparent_65%,_rgba(6,9,18,0.35)_100%]" />
       )}
 
       {/* Minimal Tactical Crosshair '+' with Hitmarker Feedback */}

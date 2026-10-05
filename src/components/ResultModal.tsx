@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import type { DrillResult } from '../types';
-import { Award, RotateCcw, Sliders, X } from 'lucide-react';
+import { Award, RotateCcw, Sliders, X, Star } from 'lucide-react';
 
 interface ResultModalProps {
   isOpen: boolean;
@@ -96,11 +96,11 @@ export const ResultModal: React.FC<ResultModalProps> = ({
   return (
     <div
       onClick={(e) => e.stopPropagation()} // Prevent accidental dismissals
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
     >
-      <div ref={modalCardRef} className="w-full max-w-2xl bg-[#0e111a] border border-[#23293c] rounded-3xl shadow-2xl overflow-hidden text-slate-100 flex flex-col">
+      <div ref={modalCardRef} className="w-full max-w-2xl bg-[#0f1422] border border-[#243148] rounded-3xl shadow-2xl overflow-hidden text-slate-100 flex flex-col">
         {/* Top Header */}
-        <div className="relative bg-gradient-to-r from-[#141926] via-[#161a29] to-[#121522] border-b border-[#21273b] p-6 flex items-center justify-between">
+        <div className="relative bg-[#131929] border-b border-[#21273b] p-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div
               ref={gradeBadgeRef}
@@ -134,7 +134,43 @@ export const ResultModal: React.FC<ResultModalProps> = ({
         </div>
 
         {/* Core Stats Grid */}
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-5">
+          {/* Campaign Star Progression Banner */}
+          <div className="result-stat-card bg-[#141b2b] border border-[#263550] rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                <Star className="w-5 h-5 fill-amber-400" />
+              </div>
+              <div>
+                <span className="text-[10px] font-mono font-bold tracking-wider text-slate-400 uppercase block">
+                  CAMPAIGN PROGRESSION
+                </span>
+                <h4 className="text-sm font-extrabold text-white">
+                  {typeof result.starsEarned === 'number'
+                    ? result.starsEarned === 3
+                      ? '3 / 3 Stars - Perfect Execution!'
+                      : result.starsEarned === 2
+                      ? '2 / 3 Stars - Stage Cleared!'
+                      : result.starsEarned === 1
+                      ? '1 / 3 Stars - Stage Cleared!'
+                      : '0 / 3 Stars - Practice to Unlock Next Stage'
+                    : 'Performance Recorded'}
+                </h4>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0c101c] border border-[#1e283d]">
+              {[1, 2, 3].map((starIdx) => (
+                <Star
+                  key={starIdx}
+                  className={`w-5 h-5 ${
+                    (result.starsEarned || 0) >= starIdx
+                      ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)] scale-110'
+                      : 'text-slate-600 fill-transparent'
+                  } transition-all`}
+                />
+              ))}
+            </div>
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {/* Accuracy */}
             <div className="result-stat-card bg-[#131622] border border-[#222738] rounded-2xl p-4 text-center">

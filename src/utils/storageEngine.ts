@@ -163,7 +163,10 @@ class StorageEngine {
   public getTotalStars(): number {
     try {
       const map = JSON.parse(localStorage.getItem(this.nodeStarsKey) || '{}');
-      return [1, 2, 3, 4, 5].reduce((sum, id) => sum + (typeof map[id] === 'number' ? map[id] : id <= 3 ? [3, 3, 2][id - 1] : 0), 0);
+      return [1, 2, 3, 4, 5].reduce((sum, id) => {
+        const val = typeof map[id] === 'number' ? map[id] : this.getNodeStars(id);
+        return sum + val;
+      }, 0);
     } catch {
       return 8;
     }
@@ -186,13 +189,21 @@ class StorageEngine {
   public saveNodeStars(nodeId: number, stars: number) {
     try {
       const map = JSON.parse(localStorage.getItem(this.nodeStarsKey) || '{}');
-      if (stars > (map[nodeId] || 0)) {
-        map[nodeId] = stars;
-        localStorage.setItem(this.nodeStarsKey, JSON.stringify(map));
+      const current = typeof map[nodeId] === 'number' ? map[nodeId] : this.getNodeStars(nodeId);
+      const newStars = Math.max(current, stars);
+      map[nodeId] = newStars;
+      localStorage.setItem(this.nodeStarsKey, JSON.stringify(map));
 
-        const profile = this.getProfile();
-        profile.totalStars = this.getTotalStars();
-        this.saveProfile(profile);
+      const profile = this.getProfile();
+      profile.totalStars = this.getTotalStars();
+      this.saveProfile(profile);
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('steadyaim:stars_updated', {
+            detail: { nodeId, stars: newStars, totalStars: profile.totalStars },
+          })
+        );
       }
     } catch {
       // fallback

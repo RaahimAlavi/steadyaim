@@ -56,17 +56,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
     `w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold tracking-wide transition-all cursor-pointer ${
       isActive
         ? 'bg-[#151c2e] text-[#00f5d4] border border-[#00f5d4]/40 shadow-[0_0_16px_rgba(0,245,212,0.2)]'
-        : 'text-slate-400 hover:text-slate-200 hover:bg-[#0f1422] border border-transparent'
+        : 'text-slate-400 hover:text-slate-200 hover:bg-[#141b2c] border border-transparent'
     }`;
 
   return (
     <aside
-      className={`fixed lg:static top-0 left-0 z-40 h-full w-64 bg-[#080b12] border-r border-[#1a2133] flex flex-col justify-between shrink-0 transition-transform duration-300 ${
+      className={`fixed lg:static top-0 left-0 z-40 h-full w-64 bg-[#0d121f] border-r border-[#1e283d] flex flex-col justify-between shrink-0 transition-transform duration-300 ${
         isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       }`}
     >
       {/* Top Header Logo */}
-      <div className="p-5 border-b border-[#141a29]">
+      <div className="p-5 border-b border-[#182236]">
         <button
           onClick={() => handleSelect('hero')}
           className="flex items-center gap-2.5 text-left group cursor-pointer"

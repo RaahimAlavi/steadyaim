@@ -19,15 +19,15 @@ export const Hero3DCanvas: React.FC = () => {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
-    // Ambient and directional lighting (soft, comfortable)
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
+    // Ambient and directional lighting (clean visibility, balanced contrast)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
     scene.add(ambientLight);
 
-    const keyLight = new THREE.PointLight(0x00f5d4, 1.2, 10);
+    const keyLight = new THREE.PointLight(0x00f5d4, 1.8, 12);
     keyLight.position.set(-2, 3, 3);
     scene.add(keyLight);
 
-    const rimLight = new THREE.PointLight(0xff4655, 0.9, 10);
+    const rimLight = new THREE.PointLight(0xff4655, 1.3, 12);
     rimLight.position.set(2, 2, -1);
     scene.add(rimLight);
 

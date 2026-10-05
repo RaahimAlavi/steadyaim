@@ -21,6 +21,7 @@ interface WhisperGripDrillProps {
   onOpenSettings: () => void;
   onExitDrill?: () => void;
   autoStart?: boolean;
+  nodeId?: number;
 }
 
 export const WhisperGripDrill: React.FC<WhisperGripDrillProps> = ({
@@ -28,6 +29,7 @@ export const WhisperGripDrill: React.FC<WhisperGripDrillProps> = ({
   onOpenSettings,
   onExitDrill,
   autoStart = false,
+  nodeId = 1,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -190,7 +192,7 @@ export const WhisperGripDrill: React.FC<WhisperGripDrillProps> = ({
     else if (accuracy >= 60) grade = 'B';
     else grade = 'C';
 
-    const starsEarned = score >= 2800 ? 3 : score >= 2000 ? 2 : score >= 1200 ? 1 : 0;
+    const starsEarned = score >= 2600 ? 3 : score >= 1800 ? 2 : score >= 1000 ? 1 : 0;
 
     // Save session to database
     storageEngine.recordSession({
@@ -203,8 +205,8 @@ export const WhisperGripDrill: React.FC<WhisperGripDrillProps> = ({
       jitterVariancePx: Number(((100 - avgJitter) * 0.05).toFixed(1)),
     });
 
-    // Save stars to node 1
-    storageEngine.saveNodeStars(1, starsEarned);
+    // Save stars to specified campaign node
+    storageEngine.saveNodeStars(nodeId ?? 1, starsEarned);
 
     const result: DrillResult = {
       id: `whisper-${Date.now()}`,
@@ -219,6 +221,7 @@ export const WhisperGripDrill: React.FC<WhisperGripDrillProps> = ({
       avgTimeToConfirmMs: avgReaction,
       avgDecelerationScore: Math.round(avgJitter * 0.95),
       grade,
+      starsEarned,
       shots,
     };
 
@@ -379,14 +382,14 @@ export const WhisperGripDrill: React.FC<WhisperGripDrillProps> = ({
     };
   }, [isLocked, isPlaying, isPaused, settings.sensitivity, settings.jitterSensitivityThreshold, handleFire, requestLock]);
 
-  // Live Star Calculation (1 Star: 1,200, 2 Stars: 2,000, 3 Stars: 2,800)
-  const currentStars = score >= 2800 ? 3 : score >= 2000 ? 2 : score >= 1200 ? 1 : 0;
-  const starProgressPercent = Math.min(100, Math.round((score / 2800) * 100));
+  // Live Star Calculation (1 Star: 1,000, 2 Stars: 1,800, 3 Stars: 2,600)
+  const currentStars = score >= 2600 ? 3 : score >= 1800 ? 2 : score >= 1000 ? 1 : 0;
+  const starProgressPercent = Math.min(100, Math.round((score / 2600) * 100));
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full flex flex-col justify-between bg-[#080b12] text-white select-none overflow-hidden"
+      className="relative w-full h-full flex flex-col justify-between bg-[#0a0e1a] text-white select-none overflow-hidden"
     >
       {/* 3D WebGL Canvas */}
       <canvas
@@ -405,9 +408,9 @@ export const WhisperGripDrill: React.FC<WhisperGripDrillProps> = ({
         </div>
       )}
 
-      {/* Dynamic Deep Eye-Friendly Vignette during active gameplay */}
+      {/* Subtle Tactical Vignette during active gameplay */}
       {isPlaying && !isPaused && (
-        <div className="absolute inset-0 pointer-events-none z-10 bg-radial-[circle_at_center,_transparent_35%,_rgba(3,5,10,0.92)_100%]" />
+        <div className="absolute inset-0 pointer-events-none z-10 bg-radial-[circle_at_center,_transparent_65%,_rgba(6,9,18,0.35)_100%]" />
       )}
 
       {/* Minimal Tactical Crosshair '+' with Hitmarker Feedback */}

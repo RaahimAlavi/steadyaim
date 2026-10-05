@@ -61,11 +61,36 @@ export function App() {
     };
   });
 
-  const [activeTab, setActiveTab] = useState<AppTab>('hero');
+  const [activeTab, setActiveTab] = useState<AppTab>(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace('#', '') as AppTab;
+      const validTabs: AppTab[] = [
+        'hero',
+        'radiant',
+        'hub',
+        'tile-frenzy',
+        'whisper',
+        'stopping',
+        'analytics',
+        'clip-analyzer',
+        'leaderboard',
+        'calibrator',
+      ];
+      if (validTabs.includes(hash)) return hash;
+    }
+    return 'hero';
+  });
+  const [activeCampaignNodeId, setActiveCampaignNodeId] = useState<number | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.location.hash = activeTab;
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     localStorage.setItem('steadyaim_settings', JSON.stringify(settings));
@@ -141,15 +166,17 @@ export function App() {
   // Dedicated Full-Screen Viewport for Tactical Aiming Drills (No Sidebar, No Navbar, No Void)
   if (isDrillActive) {
     return (
-      <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-[#07090e] select-none z-50">
+      <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-[#0a0e1a] select-none z-50">
         {activeTab === 'tile-frenzy' && (
           <TileFrenzyDrill
             settings={settings}
+            nodeId={activeCampaignNodeId ?? 3}
             onOpenSettings={() => setIsSettingsOpen(true)}
             onExitDrill={() => {
               if (document.fullscreenElement) {
                 document.exitFullscreen().catch(() => {});
               }
+              setActiveCampaignNodeId(null);
               setActiveTab('radiant');
             }}
             autoStart={true}
@@ -159,11 +186,13 @@ export function App() {
         {activeTab === 'whisper' && (
           <WhisperGripDrill
             settings={settings}
+            nodeId={activeCampaignNodeId ?? 1}
             onOpenSettings={() => setIsSettingsOpen(true)}
             onExitDrill={() => {
               if (document.fullscreenElement) {
                 document.exitFullscreen().catch(() => {});
               }
+              setActiveCampaignNodeId(null);
               setActiveTab('radiant');
             }}
             autoStart={true}
@@ -173,11 +202,13 @@ export function App() {
         {activeTab === 'stopping' && (
           <StoppingPowerDrill
             settings={settings}
+            nodeId={activeCampaignNodeId ?? 2}
             onOpenSettings={() => setIsSettingsOpen(true)}
             onExitDrill={() => {
               if (document.fullscreenElement) {
                 document.exitFullscreen().catch(() => {});
               }
+              setActiveCampaignNodeId(null);
               setActiveTab('radiant');
             }}
             autoStart={true}
@@ -197,7 +228,7 @@ export function App() {
 
   return (
     <ClickSpark sparkColor="#3b82f6" sparkSize={8} sparkRadius={18} sparkCount={7} duration={300}>
-      <div className="min-h-screen bg-[#07090e] text-slate-100 flex overflow-hidden font-sans selection:bg-blue-600 selection:text-white select-none">
+      <div className="min-h-screen bg-[#0a0e1a] text-slate-100 flex overflow-hidden font-sans selection:bg-blue-600 selection:text-white select-none">
         {/* Left Navigation Sidebar */}
         <Sidebar
           activeTab={activeTab}
@@ -245,7 +276,10 @@ export function App() {
 
               {activeTab === 'radiant' && (
                 <PathToRadiant
-                  onLaunchDrill={(drill) => setActiveTab(drill)}
+                  onLaunchDrill={(drill, nodeId) => {
+                    setActiveCampaignNodeId(nodeId);
+                    setActiveTab(drill);
+                  }}
                   currentEdpi={currentEdpi}
                 />
               )}
@@ -294,7 +328,7 @@ export function App() {
           </main>
 
           {/* Persistent Footer */}
-          <footer className="w-full bg-[#07090e] border-t border-[#161d2d] py-5 px-6 text-xs text-slate-500">
+          <footer className="w-full bg-[#0d121f] border-t border-[#1a2436] py-5 px-6 text-xs text-slate-500">
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-blue-500" />

@@ -49,12 +49,12 @@ export const HeroLanding: React.FC<HeroLandingProps> = ({
   };
 
   return (
-    <div ref={container} className="relative min-h-[92dvh] flex flex-col justify-between overflow-hidden bg-[#07090e] border-b border-[#1b202e]">
+    <div ref={container} className="relative min-h-[92dvh] flex flex-col justify-between overflow-hidden bg-[#0b101d] border-b border-[#1c273c]">
       {/* Background Interactive 3D Canvas */}
       <Hero3DCanvas />
 
-      {/* Eye-Friendly Matte Obsidian Vignette (Dims harsh 3D lights) */}
-      <div className="absolute inset-0 bg-radial-[circle_at_center,_transparent_30%,_#05070dfa_90%] pointer-events-none z-10" />
+      {/* Subtle Tactical Vignette */}
+      <div className="absolute inset-0 bg-radial-[circle_at_center,_transparent_55%,_rgba(11,16,29,0.55)_100%] pointer-events-none z-10" />
 
       {/* Top Telemetry & Global Metrics Strip */}
       <div className="relative z-20 w-full pt-6 px-6 max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-4 pointer-events-none">
